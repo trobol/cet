@@ -1,3 +1,6 @@
 build/
 .zig-cache/
 .cache/
+*.exe
+*.obj
+*.pdb

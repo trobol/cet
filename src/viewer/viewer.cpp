@@ -401,7 +401,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR pCmdLine, 
 	RedirectIOToConsole();
 
 
-	const WNDCLASSEX wc = { sizeof(WNDCLASSEX), CS_CLASSDC, WndProc, 0L, 0L, GetModuleHandle(nullptr), nullptr, nullptr, nullptr, nullptr, "ImGui Standalone", nullptr };
+	const WNDCLASSEX wc = {
+	sizeof(WNDCLASSEX), 
+	CS_CLASSDC, 
+	WndProc, 0L, 0L, 
+	GetModuleHandle(nullptr),
+	nullptr,
+	nullptr, nullptr, nullptr,
+	"ImGui Standalone", nullptr };
 	::RegisterClassEx(&wc);
 	const HWND hwnd = ::CreateWindow(wc.lpszClassName, "ImGui Standalone", WS_OVERLAPPEDWINDOW, 100, 100, 50, 50, NULL, NULL, wc.hInstance, NULL);
 	
