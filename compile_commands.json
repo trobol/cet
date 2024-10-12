@@ -1,0 +1,32 @@
+[
+	{
+	  "directory": "C:/GitHub/clang-tool/build",
+	  "command": "C:\\PROGRA~1\\MICROS~3\\2022\\Preview\\VC\\Tools\\MSVC\\1440~1.336\\bin\\Hostx64\\x64\\cl.exe  /nologo -IC:\\GitHub\\clang-tool\\src\\external\\sqlite /DWIN32 /D_WINDOWS /O2 /Ob2 /DNDEBUG -MD /FoCMakeFiles\\External_lib_sqlite3.dir\\src\\external\\sqlite\\sqlite3.c.obj /FdCMakeFiles\\External_lib_sqlite3.dir\\External_lib_sqlite3.pdb /FS -c C:\\GitHub\\clang-tool\\src\\external\\sqlite\\sqlite3.c",
+	  "file": "C:\\GitHub\\clang-tool\\src\\external\\sqlite\\sqlite3.c",
+	  "output": "CMakeFiles\\External_lib_sqlite3.dir\\src\\external\\sqlite\\sqlite3.c.obj"
+	},
+	{
+	  "directory": "C:/GitHub/clang-tool/build",
+	  "command": "C:\\PROGRA~1\\MICROS~3\\2022\\Preview\\VC\\Tools\\MSVC\\1440~1.336\\bin\\Hostx64\\x64\\cl.exe  /nologo -IC:\\GitHub\\clang-tool\\src\\external\\sqlite /DWIN32 /D_WINDOWS /O2 /Ob2 /DNDEBUG -MD /FoCMakeFiles\\sqlite_shell.dir\\src\\external\\sqlite\\shell.c.obj /FdCMakeFiles\\sqlite_shell.dir\\ /FS -c C:\\GitHub\\clang-tool\\src\\external\\sqlite\\shell.c",
+	  "file": "C:\\GitHub\\clang-tool\\src\\external\\sqlite\\shell.c",
+	  "output": "CMakeFiles\\sqlite_shell.dir\\src\\external\\sqlite\\shell.c.obj"
+	},
+	{
+	  "directory": "C:/GitHub/clang-tool/build",
+	  "command": "C:\\PROGRA~1\\MICROS~3\\2022\\Preview\\VC\\Tools\\MSVC\\1440~1.336\\bin\\Hostx64\\x64\\cl.exe  /nologo /TP -IC:\\GitHub\\clang-tool\\src\\external\\imgui -IC:\\GitHub\\clang-tool\\src\\external\\sqlite -external:IC:\\VulkanSDK\\1.3.280.0\\Include -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++17 -MD /FoCMakeFiles\\viewer.dir\\src\\viewer\\viewer.cpp.obj /FdCMakeFiles\\viewer.dir\\ /FS -c C:\\GitHub\\clang-tool\\src\\viewer\\viewer.cpp",
+	  "file": "C:\\GitHub\\clang-tool\\src\\viewer\\viewer.cpp",
+	  "output": "CMakeFiles\\viewer.dir\\src\\viewer\\viewer.cpp.obj"
+	},
+	{
+	  "directory": "C:/GitHub/clang-tool/build",
+	  "command": "C:\\PROGRA~1\\MICROS~3\\2022\\Preview\\VC\\Tools\\MSVC\\1440~1.336\\bin\\Hostx64\\x64\\cl.exe  /nologo /TP -D_CRT_SECURE_NO_DEPRECATE -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE -D_CRT_NONSTDC_NO_WARNINGS -D_SCL_SECURE_NO_DEPRECATE -D_SCL_SECURE_NO_WARNINGS -DUNICODE -D_UNICODE -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS -IC:\\GitHub\\clang-tool\\src\\external\\sqlite -external:IC:\\Users\\Thornton\\Documents\\llvm-project-llvmorg-18.1.8\\llvm\\include -external:IC:\\Users\\Thornton\\Documents\\llvm-project-llvmorg-18.1.8\\build\\include -external:IC:\\Users\\Thornton\\Documents\\llvm-project-llvmorg-18.1.8\\clang\\include -external:IC:\\Users\\Thornton\\Documents\\llvm-project-llvmorg-18.1.8\\build\\tools\\clang\\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++17 -MD /FoCMakeFiles\\clang-tool-test.dir\\src\\parser\\parser.cpp.obj /FdCMakeFiles\\clang-tool-test.dir\\ /FS -c C:\\GitHub\\clang-tool\\src\\parser\\parser.cpp",
+	  "file": "C:\\GitHub\\clang-tool\\src\\parser\\parser.cpp",
+	  "output": "CMakeFiles\\clang-tool-test.dir\\src\\parser\\parser.cpp.obj"
+	},
+	{
+	  "directory": "C:/GitHub/clang-tool/build",
+	  "command": "C:\\PROGRA~1\\MICROS~3\\2022\\Preview\\VC\\Tools\\MSVC\\1440~1.336\\bin\\Hostx64\\x64\\cl.exe  /nologo /TP -D_CRT_SECURE_NO_DEPRECATE -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE -D_CRT_NONSTDC_NO_WARNINGS -D_SCL_SECURE_NO_DEPRECATE -D_SCL_SECURE_NO_WARNINGS -DUNICODE -D_UNICODE -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS -IC:\\GitHub\\clang-tool\\src\\external\\sqlite -external:IC:\\Users\\Thornton\\Documents\\llvm-project-llvmorg-18.1.8\\llvm\\include -external:IC:\\Users\\Thornton\\Documents\\llvm-project-llvmorg-18.1.8\\build\\include -external:IC:\\Users\\Thornton\\Documents\\llvm-project-llvmorg-18.1.8\\clang\\include -external:IC:\\Users\\Thornton\\Documents\\llvm-project-llvmorg-18.1.8\\build\\tools\\clang\\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++17 -MD /FoCMakeFiles\\clang-tool-test.dir\\src\\parser\\ast_traversal.cpp.obj /FdCMakeFiles\\clang-tool-test.dir\\ /FS -c C:\\GitHub\\clang-tool\\src\\parser\\ast_traversal.cpp",
+	  "file": "C:\\GitHub\\clang-tool\\src\\parser\\ast_traversal.cpp",
+	  "output": "CMakeFiles\\clang-tool-test.dir\\src\\parser\\ast_traversal.cpp.obj"
+	}
+	]

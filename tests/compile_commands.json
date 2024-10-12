@@ -1,0 +1,8 @@
+[
+	{
+	  "directory": "C:/GitHub/clang-tool/tests/",
+	  "command": "cl.exe  /nologo /FS -c C:\\GitHub\\clang-tool\\tests\\test.cpp",
+	  "file": "test.cpp",
+	  "output": "test.cpp.obj"
+	}
+]
