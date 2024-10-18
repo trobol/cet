@@ -108,4 +108,14 @@ void ImGui_SetNextWindowViewport( ImGuiID viewport_id )
 	ImGui::SetNextWindowViewport( viewport_id );
 }
 
+ImGuiID ImGui_GetIDStr( const char* str_id_begin, const char* str_id_end )
+{
+	return ImGui::GetID( str_id_begin, str_id_end );
+}
+
+ImGuiID ImGui_DockSpace(ImGuiID dockspace_id, ImVec2 size, ImGuiDockNodeFlags flags, const ImGuiWindowClass* window_class )
+{
+	return ImGui::DockSpace( dockspace_id, size, flags, window_class );
+}
+
 }

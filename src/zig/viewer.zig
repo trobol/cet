@@ -119,8 +119,9 @@ pub fn main() !void {
 
 		imgui.r.ImGui_NewFrame();
 
-		const window_flags = imgui.r.ImGuiWindowFlags_MenuBar | imgui.r.ImGuiWindowFlags_NoDocking;
-		//window_flags |=
+		var window_flags = imgui.r.ImGuiWindowFlags_MenuBar | imgui.r.ImGuiWindowFlags_NoDocking;
+		window_flags |= imgui.r.ImGuiWindowFlags_NoTitleBar | imgui.r.ImGuiWindowFlags_NoCollapse | imgui.r.ImGuiWindowFlags_NoResize | imgui.r.ImGuiWindowFlags_NoMove;
+		window_flags |= imgui.r.ImGuiWindowFlags_NoBringToFrontOnFocus | imgui.r.ImGuiWindowFlags_NoNavFocus;
 		
 		const viewport = imgui.r.ImGui_GetMainViewport();
 
@@ -129,6 +130,9 @@ pub fn main() !void {
 		imgui.SetNextWindowViewport( viewport.*.ID );
 
 		imgui.r.ImGui_Begin("test tp", null, window_flags);
+
+		const dockspace_id = imgui.GetIDStr("MyDockSpace");
+		_ = imgui.DockSpace(.{ .dockspace_id = dockspace_id } );
 
 		var show_demo_window: bool = true;
 		imgui.r.ImGui_ShowDemoWindow(&show_demo_window);
