@@ -1,6 +1,7 @@
 const std = @import("std");
 const win: type = std.os.windows;
 
+pub const LONG = win.LONG;
 pub const BOOL = win.BOOL;
 pub const UINT = win.UINT;
 pub const INT = win.INT;
@@ -28,6 +29,13 @@ pub const WINAPI = win.WINAPI;
 
 const WNDPROC = *const fn (hwnd: HWND, param1: UINT, param2: WPARAM, param3: LPARAM) callconv(WINAPI) LRESULT;
 
+
+pub const RECT = extern struct {
+	left: LONG,
+	top: LONG,
+	right: LONG,
+	bottom: LONG,
+};
 
 pub const WNDCLASSEXA = extern struct {
     cbSize: UINT,
@@ -126,17 +134,46 @@ pub const SW_SHOWDEFAULT       : INT = 10;
 pub const SW_FORCEMINIMIZE     : INT = 11;
 pub const SW_MAX               : INT = 11;
 
-pub extern "user32" fn RegisterClassExA( wndClass: *const WNDCLASSEXA) callconv(WINAPI) ATOM;
 
-pub extern "user32" fn CreateWindowExA( dwExStyle: DWORD, lpClassName: ?LPCSTR, lpWindowName: LPCSTR, dwStyle: DWORD, X: INT, Y: INT, nWidth: INT, nHeight: INT, hWndParent: ?HWND, hMenu: ?HMENU, hInstance: ?HINSTANCE, lpParam: ?LPVOID) callconv(WINAPI) HWND;
+pub const RegisterClassExA = raw.RegisterClassExA;
+pub const CreateWindowExA = raw.CreateWindowExA;
+pub const ShowWindow = raw.ShowWindow;
+pub const UpdateWindow = raw.UpdateWindow;
+pub const PeekMessageA = raw.PeekMessageA;
+pub const DispatchMessageA = raw.DispatchMessageA;
+pub const TranslateMessage = raw.TranslateMessage;
+pub const DefWindowProcA = raw.DefWindowProcA;
+pub const GetModuleHandleA = raw.GetModuleHandleA;
 
-pub extern "user32" fn ShowWindow( hWnd: HWND, nCmdShow: INT ) callconv(WINAPI) BOOL;
-pub extern "user32" fn UpdateWindow( hWnd: HWND ) callconv(WINAPI) BOOL;
 
-pub extern "user32" fn PeekMessageA( lpMsg: *MSG, hWnd: ?HWND, wMsgFilterMin: UINT, wMsgFilterMax: UINT, wRemoveMsg: UINT ) callconv(WINAPI) BOOL;
-pub extern "user32" fn DispatchMessageA( lpMsg: *const MSG ) callconv(WINAPI) LRESULT;
-pub extern "user32" fn TranslateMessage( lpMsg: *const MSG ) callconv(WINAPI) BOOL;
+pub fn GetClientRect( hWnd: HWND ) error{Unexpected}!RECT
+{
+	var rect: RECT = undefined;
+	if ( raw.GetClientRect( hWnd, &rect ) == 0 )
+	{
+		switch (win.GetLastError()) {
+			else => |err| return win.unexpectedError(err),
+		}
+	}
+	return rect;
+}
 
-pub extern "user32" fn DefWindowProcA( hWnd: HWND, Msg: UINT, wParam: WPARAM, lParam: LPARAM) callconv(WINAPI) LRESULT;
 
-pub extern "user32" fn GetModuleHandleA( lpModuleName: ?LPCSTR ) callconv(WINAPI) HMODULE;
+pub const raw = struct {
+	pub extern "user32" fn RegisterClassExA( wndClass: *const WNDCLASSEXA) callconv(WINAPI) ATOM;
+
+	pub extern "user32" fn CreateWindowExA( dwExStyle: DWORD, lpClassName: ?LPCSTR, lpWindowName: LPCSTR, dwStyle: DWORD, X: INT, Y: INT, nWidth: INT, nHeight: INT, hWndParent: ?HWND, hMenu: ?HMENU, hInstance: ?HINSTANCE, lpParam: ?LPVOID) callconv(WINAPI) HWND;
+
+	pub extern "user32" fn ShowWindow( hWnd: HWND, nCmdShow: INT ) callconv(WINAPI) BOOL;
+	pub extern "user32" fn UpdateWindow( hWnd: HWND ) callconv(WINAPI) BOOL;
+
+	pub extern "user32" fn PeekMessageA( lpMsg: *MSG, hWnd: ?HWND, wMsgFilterMin: UINT, wMsgFilterMax: UINT, wRemoveMsg: UINT ) callconv(WINAPI) BOOL;
+	pub extern "user32" fn DispatchMessageA( lpMsg: *const MSG ) callconv(WINAPI) LRESULT;
+	pub extern "user32" fn TranslateMessage( lpMsg: *const MSG ) callconv(WINAPI) BOOL;
+
+	pub extern "user32" fn DefWindowProcA( hWnd: HWND, Msg: UINT, wParam: WPARAM, lParam: LPARAM) callconv(WINAPI) LRESULT;
+
+	pub extern "user32" fn GetModuleHandleA( lpModuleName: ?LPCSTR ) callconv(WINAPI) HMODULE;
+
+	pub extern "user32" fn GetClientRect( hWnd: HWND, lpRect: *RECT ) callconv(WINAPI) BOOL;
+};

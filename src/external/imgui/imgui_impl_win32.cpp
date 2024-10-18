@@ -106,6 +106,10 @@ typedef DWORD(WINAPI* PFN_XInputGetState)(DWORD, XINPUT_STATE*);
 #pragma GCC diagnostic ignored "-Wcast-function-type"       // warning: cast between incompatible function types (for loader)
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // Forward Declarations
 static void ImGui_ImplWin32_InitPlatformInterface(bool platform_has_own_dc);
 static void ImGui_ImplWin32_ShutdownPlatformInterface();
@@ -1381,6 +1385,10 @@ static void ImGui_ImplWin32_ShutdownPlatformInterface()
     ::UnregisterClass(_T("ImGui Platform"), ::GetModuleHandle(nullptr));
     ImGui::DestroyPlatformWindows();
 }
+
+#ifdef __cplusplus
+}
+#endif
 
 //---------------------------------------------------------------------------------------------------------
 

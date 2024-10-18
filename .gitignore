@@ -4,3 +4,4 @@ build/
 *.exe
 *.obj
 *.pdb
+imgui.ini

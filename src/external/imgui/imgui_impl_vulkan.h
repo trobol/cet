@@ -29,7 +29,15 @@
 
 #pragma once
 #ifndef IMGUI_DISABLE
-#include "imgui.h"      // IMGUI_IMPL_API
+//#include "imgui.h"      // IMGUI_IMPL_API
+
+#ifdef IMGUI_IMPL_API
+#undef IMGUI_IMPL_API
+#endif
+
+#define IMGUI_IMPL_API
+
+#include <stdbool.h>
 
 // [Configuration] in order to use a custom Vulkan function loader:
 // (1) You'll need to disable default Vulkan function prototypes.
@@ -64,12 +72,16 @@
 #define IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // Initialization data, for ImGui_ImplVulkan_Init()
 // - VkDescriptorPool should be created with VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT,
 //   and must contain a pool size large enough to hold an ImGui VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER descriptor.
 // - When using dynamic rendering, set UseDynamicRendering=true and fill PipelineRenderingCreateInfo structure.
 // [Please zero-clear before use!]
-struct ImGui_ImplVulkan_InitInfo
+typedef struct ImGui_ImplVulkan_InitInfo
 {
     VkInstance                      Instance;
     VkPhysicalDevice                PhysicalDevice;
@@ -97,13 +109,13 @@ struct ImGui_ImplVulkan_InitInfo
     const VkAllocationCallbacks*    Allocator;
     void                            (*CheckVkResultFn)(VkResult err);
     VkDeviceSize                    MinAllocationSize;      // Minimum allocation size. Set to 1024*1024 to satisfy zealous best practices validation layer and waste a little memory.
-};
+} ImGui_ImplVulkan_InitInfo;
 
 // Follow "Getting Started" link and check examples/ folder to learn about using backends!
 IMGUI_IMPL_API bool         ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info);
 IMGUI_IMPL_API void         ImGui_ImplVulkan_Shutdown();
 IMGUI_IMPL_API void         ImGui_ImplVulkan_NewFrame();
-IMGUI_IMPL_API void         ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer command_buffer, VkPipeline pipeline = VK_NULL_HANDLE);
+IMGUI_IMPL_API void         ImGui_ImplVulkan_RenderDrawData(struct ImDrawData* draw_data, VkCommandBuffer command_buffer, VkPipeline pipeline /*= VK_NULL_HANDLE */);
 IMGUI_IMPL_API bool         ImGui_ImplVulkan_CreateFontsTexture();
 IMGUI_IMPL_API void         ImGui_ImplVulkan_DestroyFontsTexture();
 IMGUI_IMPL_API void         ImGui_ImplVulkan_SetMinImageCount(uint32_t min_image_count); // To override MinImageCount after initialization (e.g. if swap chain is recreated)
@@ -116,7 +128,7 @@ IMGUI_IMPL_API void            ImGui_ImplVulkan_RemoveTexture(VkDescriptorSet de
 
 // Optional: load Vulkan functions with a custom function loader
 // This is only useful with IMGUI_IMPL_VULKAN_NO_PROTOTYPES / VK_NO_PROTOTYPES
-IMGUI_IMPL_API bool         ImGui_ImplVulkan_LoadFunctions(PFN_vkVoidFunction(*loader_func)(const char* function_name, void* user_data), void* user_data = nullptr);
+IMGUI_IMPL_API bool         ImGui_ImplVulkan_LoadFunctions(PFN_vkVoidFunction(*loader_func)(const char* function_name, void* user_data), void* user_data /*= nullptr*/);
 
 //-------------------------------------------------------------------------
 // Internal / Miscellaneous Vulkan Helpers
@@ -134,8 +146,8 @@ IMGUI_IMPL_API bool         ImGui_ImplVulkan_LoadFunctions(PFN_vkVoidFunction(*l
 // (The ImGui_ImplVulkanH_XXX functions do not interact with any of the state used by the regular ImGui_ImplVulkan_XXX functions)
 //-------------------------------------------------------------------------
 
-struct ImGui_ImplVulkanH_Frame;
-struct ImGui_ImplVulkanH_Window;
+typedef struct ImGui_ImplVulkanH_Frame ImGui_ImplVulkanH_Frame;
+typedef struct ImGui_ImplVulkanH_Window ImGui_ImplVulkanH_Window;
 
 // Helpers
 IMGUI_IMPL_API void                 ImGui_ImplVulkanH_CreateOrResizeWindow(VkInstance instance, VkPhysicalDevice physical_device, VkDevice device, ImGui_ImplVulkanH_Window* wd, uint32_t queue_family, const VkAllocationCallbacks* allocator, int w, int h, uint32_t min_image_count);
@@ -157,11 +169,11 @@ struct ImGui_ImplVulkanH_Frame
     VkFramebuffer       Framebuffer;
 };
 
-struct ImGui_ImplVulkanH_FrameSemaphores
+typedef struct ImGui_ImplVulkanH_FrameSemaphores
 {
     VkSemaphore         ImageAcquiredSemaphore;
     VkSemaphore         RenderCompleteSemaphore;
-};
+} ImGui_ImplVulkanH_FrameSemaphores;
 
 // Helper structure to hold the data needed by one rendering context into one OS window
 // (Used by example's main.cpp. Used by multi-viewport features. Probably NOT used by your own engine/app.)
@@ -184,12 +196,16 @@ struct ImGui_ImplVulkanH_Window
     ImGui_ImplVulkanH_Frame*            Frames;
     ImGui_ImplVulkanH_FrameSemaphores*  FrameSemaphores;
 
-    ImGui_ImplVulkanH_Window()
-    {
-        memset((void*)this, 0, sizeof(*this));
-        PresentMode = (VkPresentModeKHR)~0;     // Ensure we get an error if user doesn't set this.
-        ClearEnable = true;
-    }
+//    ImGui_ImplVulkanH_Window()
+//    {
+//        memset((void*)this, 0, sizeof(*this));
+//        PresentMode = (VkPresentModeKHR)~0;     // Ensure we get an error if user doesn't set this.
+//        ClearEnable = true;
+//    }
 };
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // #ifndef IMGUI_DISABLE
