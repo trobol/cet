@@ -13,12 +13,7 @@ void ImGui_NewFrame();
 void ImGui_EndFrame();
 void ImGui_Render();
 
-struct ImGuiViewport* ImGui_GetMainViewPort();
-
-void ImGui_SetNextWindowPos(const ImVec2* pos, ImGuiCond cond, const ImVec2* pivot);
-void ImGui_SetNextWindowSize(const ImVec2* size, ImGuiCond cond);
-void ImGui_SetNextWindowViewport(ImGuiID id);
-
+struct ImGuiViewport* ImGui_GetMainViewport();
 
 void ImGui_Begin(const char* name, bool* p_open, ImGuiWindowFlags flags);
 void ImGui_End();
@@ -40,7 +35,6 @@ void ImGui_ShowDemoWindow(bool* p_open);
 
 
 ImDrawData* ImGui_GetDrawData();
-
 
 void ImGui_UpdatePlatformWindows();
 void ImGui_RenderPlatformWindowsDefault();

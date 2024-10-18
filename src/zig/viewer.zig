@@ -9,6 +9,8 @@ const imgui = @import("imgui.zig");
 
 const win: type = std.os.windows;
 
+const assert = std.debug.assert;
+
 
 extern fn ImGui_ImplWin32_WndProcHandler(hWnd:user32.HWND, msg: user32.UINT, wParam: user32.WPARAM, lParam: user32.LPARAM) callconv(.C) user32.LRESULT;
 fn WndProc(hWnd: user32.HWND, msg: user32.UINT, wParam: user32.WPARAM, lParam: user32.LPARAM) callconv(user32.WINAPI) user32.LRESULT 
@@ -19,8 +21,6 @@ fn WndProc(hWnd: user32.HWND, msg: user32.UINT, wParam: user32.WPARAM, lParam: u
 	return user32.DefWindowProcA(hWnd, msg, wParam, lParam);
 }
 
-
-const assert = std.debug.assert;
 
 pub fn main() !void {
 	const arena = Arena.Arena.init();
@@ -70,6 +70,8 @@ pub fn main() !void {
 
 	imgui.r.ImGui_CreateContext();
 
+	imgui.GetIO().ConfigFlags |= imgui.r.ImGuiConfigFlags_DockingEnable;
+
 	_ = imgui.win.ImGui_ImplWin32_Init(hwnd);
 
 	var init_info = vk.ImGui_ImplVulkan_InitInfo{
@@ -117,9 +119,21 @@ pub fn main() !void {
 
 		imgui.r.ImGui_NewFrame();
 
+		const window_flags = imgui.r.ImGuiWindowFlags_MenuBar | imgui.r.ImGuiWindowFlags_NoDocking;
+		//window_flags |=
+		
+		const viewport = imgui.r.ImGui_GetMainViewport();
+
+		imgui.SetNextWindowPos( .{ .pos = viewport.*.WorkPos } );
+		imgui.SetNextWindowSize( .{ .size = viewport.*.WorkSize } );
+		imgui.SetNextWindowViewport( viewport.*.ID );
+
+		imgui.r.ImGui_Begin("test tp", null, window_flags);
+
 		var show_demo_window: bool = true;
 		imgui.r.ImGui_ShowDemoWindow(&show_demo_window);
 
+		imgui.r.ImGui_End();
 		imgui.r.ImGui_Render();
 
 		imgui.r.ImGui_UpdatePlatformWindows();

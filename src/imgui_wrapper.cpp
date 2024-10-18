@@ -22,25 +22,11 @@ void ImGui_Render()
 	ImGui::Render();
 }
 
-struct ImGuiViewport* ImGui_GetMainViewPort()
+ImGuiViewport* ImGui_GetMainViewport()
 {
-	ImGui::GetMainViewport();
+	return ImGui::GetMainViewport();
 }
 
-void ImGui_SetNextWindowPos(const ImVec2* pos, ImGuiCond cond, const ImVec2* pivot)
-{
-	ImGui::SetNextWindowPos(*pos, cond, *pivot);
-}
-
-void ImGui_SetNextWindowSize(const ImVec2* size, ImGuiCond cond)
-{
-	ImGui::SetNextWindowSize(*size, cond);
-}
-
-void ImGui_SetNextWindowViewport(ImGuiID id)
-{
-	ImGui::SetNextWindowViewport(id);
-}
 
 void ImGui_Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 {
@@ -101,4 +87,25 @@ void ImGui_RenderPlatformWindowsDefault()
 {
 	ImGui::RenderPlatformWindowsDefault();
 }
+
+ImGuiIO* ImGui_GetIO()
+{
+	return &ImGui::GetIO();
+}
+
+void ImGui_SetNextWindowPos( ImVec2 pos, ImGuiCond cond, ImVec2 pivot) 
+{
+	ImGui::SetNextWindowPos( pos, cond, pivot );
+}
+
+void ImGui_SetNextWindowSize( ImVec2 size, ImGuiCond cond ) 
+{
+	ImGui::SetNextWindowSize( size, cond );
+}
+
+void ImGui_SetNextWindowViewport( ImGuiID viewport_id ) 
+{
+	ImGui::SetNextWindowViewport( viewport_id );
+}
+
 }
