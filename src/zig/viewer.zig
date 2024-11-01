@@ -1,18 +1,16 @@
 const std = @import("std");
 const user32 = @import("winuser.zig");
-
 const Arena = @import("arena.zig");
-
 const vk = @import("vulkan.zig");
-
 const imgui = @import("imgui.zig");
-
-const win: type = std.os.windows;
+const tree_pane = @import("tree_pane.zig");
+const sqlite = @import("sqlite.zig");
+const win = std.os.windows;
 
 const assert = std.debug.assert;
 
 
-extern fn ImGui_ImplWin32_WndProcHandler(hWnd:user32.HWND, msg: user32.UINT, wParam: user32.WPARAM, lParam: user32.LPARAM) callconv(.C) user32.LRESULT;
+extern fn ImGui_ImplWin32_WndProcHandler( hWnd: user32.HWND, msg: user32.UINT, wParam: user32.WPARAM, lParam: user32.LPARAM ) callconv(.C) user32.LRESULT;
 fn WndProc(hWnd: user32.HWND, msg: user32.UINT, wParam: user32.WPARAM, lParam: user32.LPARAM) callconv(user32.WINAPI) user32.LRESULT 
 {
 	if (ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam) != 0)
@@ -52,7 +50,7 @@ pub fn main() !void {
 		"ImGui Standalone",
 		user32.WS_OVERLAPPEDWINDOW,
 		100, 100,
-		50, 50,
+		2000, 2000,
 		null, null,
 		@ptrCast( wc.hInstance ), null
 	);
@@ -68,7 +66,7 @@ pub fn main() !void {
 	setupVulkanWindow( &wd, gfx, 50, 50 );
 
 
-	imgui.r.ImGui_CreateContext();
+	imgui.CreateContext();
 
 	imgui.GetIO().ConfigFlags |= imgui.r.ImGuiConfigFlags_DockingEnable;
 
@@ -96,17 +94,15 @@ pub fn main() !void {
 	_ = user32.ShowWindow( hwnd, user32.SW_SHOWDEFAULT );
 	assert( user32.UpdateWindow( hwnd ) != 0 );
 
-	var running = true;
 
-	while ( running )
+	core_loop: while ( true )
 	{
-		var msg: user32.MSG = undefined;
-		while(user32.PeekMessageA(&msg, null, 0, 0, 1) != 0)
+		while( user32.PeekMessageA( null, 0, 0, 1 ) ) |msg|
 		{
 			_ = user32.TranslateMessage(&msg);
 			_ = user32.DispatchMessageA(&msg);
-			if (msg.message == 0x0012) // WM_QUIT
-				running = false;
+			if (msg.message == .WM_QUIT) // WM_QUIT
+				break :core_loop;
 		}
 
 		const area = try user32.GetClientRect( hwnd );
@@ -123,22 +119,22 @@ pub fn main() !void {
 		window_flags |= imgui.r.ImGuiWindowFlags_NoTitleBar | imgui.r.ImGuiWindowFlags_NoCollapse | imgui.r.ImGuiWindowFlags_NoResize | imgui.r.ImGuiWindowFlags_NoMove;
 		window_flags |= imgui.r.ImGuiWindowFlags_NoBringToFrontOnFocus | imgui.r.ImGuiWindowFlags_NoNavFocus;
 		
-		const viewport = imgui.r.ImGui_GetMainViewport();
+		const viewport = imgui.GetMainViewport();
 
 		imgui.SetNextWindowPos( .{ .pos = viewport.*.WorkPos } );
 		imgui.SetNextWindowSize( .{ .size = viewport.*.WorkSize } );
 		imgui.SetNextWindowViewport( viewport.*.ID );
 
-		imgui.r.ImGui_Begin("test tp", null, window_flags);
+		imgui.Begin("test tp", null, window_flags);
 
 		const dockspace_id = imgui.GetIDStr("MyDockSpace");
 		_ = imgui.DockSpace(.{ .dockspace_id = dockspace_id } );
 
 		var show_demo_window: bool = true;
-		imgui.r.ImGui_ShowDemoWindow(&show_demo_window);
+		imgui.ShowDemoWindow(&show_demo_window);
 
-		imgui.r.ImGui_End();
-		imgui.r.ImGui_Render();
+		imgui.End();
+		imgui.Render();
 
 		imgui.r.ImGui_UpdatePlatformWindows();
 		imgui.r.ImGui_RenderPlatformWindowsDefault();

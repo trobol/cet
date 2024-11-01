@@ -14,6 +14,15 @@ pub const win = @cImport({
 
 
 
+pub const GetMainViewport = r.ImGui_GetMainViewport;
+pub const Begin = r.ImGui_Begin;
+pub const End = r.ImGui_End;
+pub const Render = r.ImGui_Render;
+pub const CreateContext = r.ImGui_CreateContext;
+
+pub const ShowDemoWindow = r.ImGui_ShowDemoWindow;
+
+
 pub fn GetDrawData() *r.ImDrawData
 {
 	return r.ImGui_GetDrawData() orelse unreachable;

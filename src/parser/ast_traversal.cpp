@@ -159,8 +159,8 @@ public:
 		return parentStack[parentStack.size()-2];
 	}
 
-    bool TraverseDecl(clang::Decl *D) {
-       
+	bool TraverseDecl(clang::Decl *D) {
+
 		bool recordParent = D->getKind() != clang::Decl::Kind::Var;
 		
 		if (recordParent) {
@@ -232,13 +232,10 @@ public:
 	}
 
 
-    bool TraverseType(clang::QualType x) {
-        // your logic here
-        clang::RecursiveASTVisitor<Visitor>::TraverseType(x);
-		//	printf("##TraverseType\n");
-		//	x->dump();
-        return true;
-    }
+	bool TraverseType(clang::QualType x) {
+		clang::RecursiveASTVisitor<Visitor>::TraverseType(x);
+		return true;
+	}
 	Visitor(sqlite3_stmt *stmt) : pStmt{stmt} {};
 	sqlite3_stmt *pStmt;
 	clang::ASTContext* Context;
@@ -248,33 +245,32 @@ public:
 
 class FindNamedClassConsumer : public clang::ASTConsumer {
 public:
-  explicit FindNamedClassConsumer(clang::ASTContext *Context, sqlite3_stmt *stmt)
-    : Visitor(stmt) {}
+	explicit FindNamedClassConsumer(clang::ASTContext *Context, sqlite3_stmt *stmt) : Visitor(stmt) {}
 
-  virtual void HandleTranslationUnit(clang::ASTContext &Context) {
+	virtual void HandleTranslationUnit(clang::ASTContext &Context) {
 	//printf("HandleTranslationUnit\n");
-	Visitor.Context = &Context;
-    Visitor.TraverseDecl(Context.getTranslationUnitDecl());
-  }
+		Visitor.Context = &Context;
+		Visitor.TraverseDecl(Context.getTranslationUnitDecl());
+	}
 private:
-  Visitor Visitor;
+	Visitor Visitor;
 };
 
 class FindNamedClassAction : public clang::ASTFrontendAction {
 public:
-  virtual std::unique_ptr<clang::ASTConsumer> CreateASTConsumer(
-    clang::CompilerInstance &Compiler, llvm::StringRef InFile) {
+	virtual std::unique_ptr<clang::ASTConsumer> CreateASTConsumer( clang::CompilerInstance &Compiler, llvm::StringRef InFile ) {
 		printf("make FindNamedClassConsumer\n");
-    return std::make_unique<FindNamedClassConsumer>(&Compiler.getASTContext(), pStmt);
-  }
+		return std::make_unique<FindNamedClassConsumer>(&Compiler.getASTContext(), pStmt);
+	}
+
 	FindNamedClassAction(sqlite3_stmt *stmt) : pStmt{stmt} {}
-  sqlite3_stmt *pStmt;
+	sqlite3_stmt *pStmt;
 };
 
 
 
 
-int traverse_ast(clang::tooling::ClangTool* tool, const std::string& db_name)
+int traverseAst(clang::tooling::ClangTool* tool, const std::string& db_name)
 {
 	sqlite3 *db;
 	int rc = sqlite3_open(db_name.c_str(), &db);

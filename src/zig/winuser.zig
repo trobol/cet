@@ -54,13 +54,20 @@ pub const WNDCLASSEXA = extern struct {
 };
 
 
+
 pub const MSG = extern struct {
 	hwnd: HWND,
-	message: UINT,
+	message: MESSAGE,
 	wParam: WPARAM,
 	lParam: LPARAM,
 	time: DWORD,
 	pt: POINT,
+
+
+	const MESSAGE = enum(UINT) {
+		WM_QUIT = 0x0012,
+		_
+	};
 };
 
 
@@ -139,12 +146,22 @@ pub const RegisterClassExA = raw.RegisterClassExA;
 pub const CreateWindowExA = raw.CreateWindowExA;
 pub const ShowWindow = raw.ShowWindow;
 pub const UpdateWindow = raw.UpdateWindow;
-pub const PeekMessageA = raw.PeekMessageA;
 pub const DispatchMessageA = raw.DispatchMessageA;
 pub const TranslateMessage = raw.TranslateMessage;
 pub const DefWindowProcA = raw.DefWindowProcA;
 pub const GetModuleHandleA = raw.GetModuleHandleA;
 
+
+// Dispatches incoming nonqueued messages, checks the thread message queue for a posted message, and retrieves the message (if any exist).
+pub fn PeekMessageA( hWnd: ?HWND, wMsgFilterMin: UINT, wMsgFilterMax: UINT, wRemoveMsg: UINT ) ?MSG
+{
+	var msg: MSG = undefined;
+	if ( raw.PeekMessageA( &msg, hWnd, wMsgFilterMin, wMsgFilterMax, wRemoveMsg ) != 0 )
+	{
+		return msg;
+	}
+	return null;
+}
 
 pub fn GetClientRect( hWnd: HWND ) error{Unexpected}!RECT
 {

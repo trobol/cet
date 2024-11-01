@@ -32,7 +32,7 @@ static cl::OptionCategory MyToolCategory("my-tool options");
 static cl::opt<std::string> arg_Path("path", cl::desc("Specify path"), cl::value_desc("path"), cl::cat(MyToolCategory));
 cl::opt<std::string> arg_None(cl::Positional, cl::desc("<regular expression>"), cl::cat(MyToolCategory)); 
 
-int traverse_ast(clang::tooling::ClangTool* tool, const std::string& db_name);
+int traverseAst(clang::tooling::ClangTool* tool, const std::string& db_name);
 
 int main(int argc, const char **argv) {
 	cl::HideUnrelatedOptions(MyToolCategory);
@@ -58,6 +58,13 @@ int main(int argc, const char **argv) {
 	}
 
 	ClangTool Tool(*db, db->getAllFiles());
-	std::string name = "compile.db";
-	return traverse_ast(&Tool, name);
+
+	std::chrono::milliseconds ms = std::chrono::duration_cast< std::chrono::milliseconds >(
+	std::chrono::system_clock::now().time_since_epoch() );
+
+	char buf[1024];
+	sprintf(buf, "%llu.db", ms.count());
+
+
+	return traverseAst(&Tool, std::string(buf));
 }
