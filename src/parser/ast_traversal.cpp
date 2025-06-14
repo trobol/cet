@@ -5,9 +5,6 @@
 
 #include <sqlite3.h>
 
-int traverse_ast(clang::tooling::ClangTool* tool, const std::string& db_name);
-
-
 
 static int sql_callback(void *NotUsed, int argc, char **argv, char **azColName){
 	int i;
@@ -135,23 +132,63 @@ void sql_add_node(sqlite3_stmt *stmt, int64_t id, int64_t parent_id, const char*
 	sqlite3_reset(stmt);
 }
 
-class SingleFrontendActionFactory: public clang::tooling::FrontendActionFactory
-{
+
+
+
+class Recorder {
+	
 public:
-	SingleFrontendActionFactory(clang::FrontendAction* action) : m_action(action) {}
-	std::unique_ptr<clang::FrontendAction> create() override { 
-		printf("SingleFrontendActionFactory create\n");
-		return std::unique_ptr<clang::FrontendAction>(m_action);
+	void record( int64_t id, int64_t parent_id, const char* text )
+	{
+		printf("%s\n", text);
+		items.push_back({id, parent_id, strdup(text)});
 	}
 
-private:
-	clang::FrontendAction* m_action;
+	struct Item 
+	{
+		int64_t id;
+		int64_t parent_id;
+		const char* text;
+	};
+	
+	std::vector<Item> items;
 };
+
+
 
 
 
 class Visitor : public clang::RecursiveASTVisitor<Visitor> {
 public:
+
+
+	using ParentStack = std::vector<int64_t>;
+
+	struct ParentPopper {
+		ParentStack* parentStack;
+		int64_t id;
+
+		ParentPopper() : parentStack{nullptr}, id{0} {};
+		ParentPopper(ParentStack* p, int64_t i) : parentStack{p}, id{i} {};
+		ParentPopper (const ParentPopper&) = delete;
+		ParentPopper& operator= (const ParentPopper&) = delete;
+
+		ParentPopper(ParentPopper&& other) { parentStack = other.parentStack; id = other.id; other.parentStack = nullptr; };
+		ParentPopper& operator=(ParentPopper&& other) { parentStack = other.parentStack; id = other.id; other.parentStack = nullptr; return *this; };
+		~ParentPopper() {
+			if (parentStack != nullptr)
+			{
+				assert( parentStack->back() == id );
+				parentStack->pop_back();
+			}
+		}
+	};
+
+	ParentPopper pushParent( int64_t id )
+	{
+		parentStack.push_back( id );
+		return std::move(ParentPopper( &parentStack, id  ));
+	}
 
 	int64_t get_parent()
 	{
@@ -162,16 +199,14 @@ public:
 	bool TraverseDecl(clang::Decl *D) {
 
 		bool recordParent = D->getKind() != clang::Decl::Kind::Var;
+
+		ParentPopper pp = {};
 		
 		if (recordParent) {
 			int64_t id = D->getCanonicalDecl()->getID();
-			parentStack.push_back(D->getID());
+			pp = pushParent(D->getID());
 		}
         clang::RecursiveASTVisitor<Visitor>::TraverseDecl(D); // Forward to base class
-		//printf("##TraverseDecl\n");
-		//D->dump();
-		if (recordParent) parentStack.pop_back();
-
 		return true; // Return false to stop the AST analyzing
 	}
 
@@ -179,7 +214,7 @@ public:
 	{	
 		if (!D->isCanonicalDecl()) return true;
 
-		D->getDeclName().dump();
+		//D->getDeclName().dump();
 		const char* name = "";
 		clang::IdentifierInfo* info = D->getIdentifier();
 		if (info)
@@ -197,13 +232,7 @@ public:
 		
 		llvm::SmallString<1024> usr_buf;
 		clang::index::generateUSRForDecl(D, usr_buf);
-		sql_run_stmt(pStmt,
-			D->getID(),
-			get_parent(),
-			name,
-			usr_buf.c_str(),
-			params
-		);
+		recorder->record( D->getID(), get_parent(), name );
 		return true;
 	}
 
@@ -219,6 +248,7 @@ public:
 	bool VisitStmt(clang::Stmt* smt)
 	{
 		//sql_add_node(pStmt, smt->getID(*Context), get_parent(), ""); 
+		//recorder->record( smt->getID(*Context), parentStack.back(), smt->getName().data() );
 		return true;
 	}
 
@@ -226,7 +256,7 @@ public:
 	{
 		//if (pStmt == NULL) fprintf( stderr, "null statement\n");
 		//printf("%s %lli %s\n", indent + parentStack.size(), expr->getID(*Context), expr->getDecl()->getName().data());
-		sql_add_node(pStmt, expr->getID(*Context), parentStack.back(), expr->getDecl()->getName().data()); 
+		recorder->record(expr->getID(*Context), parentStack.back(), expr->getDecl()->getName().data()); 
 		
 		return false;
 	}
@@ -236,65 +266,27 @@ public:
 		clang::RecursiveASTVisitor<Visitor>::TraverseType(x);
 		return true;
 	}
-	Visitor(sqlite3_stmt *stmt) : pStmt{stmt} {};
-	sqlite3_stmt *pStmt;
+	Visitor(Recorder *r, clang::ASTContext* c) : recorder{r}, Context{c} {};
 	clang::ASTContext* Context;
 	std::vector<int64_t> parentStack;
+	Recorder* recorder;
 };
 
 
-class FindNamedClassConsumer : public clang::ASTConsumer {
-public:
-	explicit FindNamedClassConsumer(clang::ASTContext *Context, sqlite3_stmt *stmt) : Visitor(stmt) {}
-
-	virtual void HandleTranslationUnit(clang::ASTContext &Context) {
-	//printf("HandleTranslationUnit\n");
-		Visitor.Context = &Context;
-		Visitor.TraverseDecl(Context.getTranslationUnitDecl());
-	}
-private:
-	Visitor Visitor;
-};
-
-class FindNamedClassAction : public clang::ASTFrontendAction {
-public:
-	virtual std::unique_ptr<clang::ASTConsumer> CreateASTConsumer( clang::CompilerInstance &Compiler, llvm::StringRef InFile ) {
-		printf("make FindNamedClassConsumer\n");
-		return std::make_unique<FindNamedClassConsumer>(&Compiler.getASTContext(), pStmt);
-	}
-
-	FindNamedClassAction(sqlite3_stmt *stmt) : pStmt{stmt} {}
-	sqlite3_stmt *pStmt;
-};
-
-
-
-
-int traverseAst(clang::tooling::ClangTool* tool, const std::string& db_name)
+int traverseAst( clang::tooling::ClangTool* tool, const std::string& db_name )
 {
-	sqlite3 *db;
-	int rc = sqlite3_open(db_name.c_str(), &db);
-	if( rc ){
-		fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
-		sqlite3_close(db);
-		return(1);
-	}
 
-	sql_run_raw(db, "CREATE TABLE compile_db (id BIGINT, parent_id BIGINT, identifier text, usr text, params text);");
+	Recorder recorder;
+	std::vector<std::unique_ptr<clang::ASTUnit>> ASTs;
+  	tool->buildASTs(ASTs);
 
-	sqlite3_stmt *pStmt;
-	rc = sqlite3_prepare_v2(db, "INSERT INTO compile_db (id, parent_id, identifier, usr, params) VALUES (?, ?, ?, ?, ?)", -1, &pStmt, NULL);
-	if (rc != SQLITE_OK)
+	for ( auto& ast : ASTs )
 	{
-		fprintf(stderr, "SQL prepare error: %i %s\n", rc, sqlite3_errmsg(db));
-		return EXIT_FAILURE;
+		clang::ASTContext* context = &ast->getASTContext();
+		Visitor vistor( &recorder, context );
+		vistor.TraverseDecl( context->getTranslationUnitDecl() );
+
 	}
 
-	clang::ASTFrontendAction* action = new FindNamedClassAction(pStmt);
-	int toolstate = tool->run(new SingleFrontendActionFactory(action));
-
-	fprintf( stderr, "\n\nfinished!\n" );
-	sqlite3_finalize(pStmt);
-	sqlite3_close(db);
-	return toolstate;
+	return 0;
 }
