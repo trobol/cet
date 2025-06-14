@@ -3,7 +3,7 @@ const user32 = @import("winuser.zig");
 const Arena = @import("arena.zig");
 const vk = @import("vulkan.zig");
 const imgui = @import("imgui.zig");
-const tree_pane = @import("tree_pane.zig");
+const tree_pane = @import("core_gui.zig");
 const sqlite = @import("sqlite.zig");
 const win = std.os.windows;
 
@@ -13,8 +13,29 @@ const assert = std.debug.assert;
 extern fn ImGui_ImplWin32_WndProcHandler( hWnd: user32.HWND, msg: user32.UINT, wParam: user32.WPARAM, lParam: user32.LPARAM ) callconv(.C) user32.LRESULT;
 fn WndProc(hWnd: user32.HWND, msg: user32.UINT, wParam: user32.WPARAM, lParam: user32.LPARAM) callconv(user32.WINAPI) user32.LRESULT 
 {
-	if (ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam) != 0)
+	if ( ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam) != 0 )
 		return 1;
+
+	switch ( @as( user32.MSG.MESSAGE, @enumFromInt( msg ) ) )
+	{
+		.WM_SIZE => {
+			//if (wParam == SIZE_MINIMIZED)
+			//return 0;
+			//g_ResizeWidth = (UINT)LOWORD(lParam); // Queue resize
+			//g_ResizeHeight = (UINT)HIWORD(lParam);
+			return 0;
+		},
+
+		.WM_SYSCOMMAND => {
+			if ((wParam & 0xfff0) == 0xF100) // SC_KEYMENU Disable ALT application menu
+				return 0;
+		},
+		.WM_DESTROY => {
+			user32.PostQuitMessage(0);
+			return 0;
+		},
+		else => {}
+	}
 
 	return user32.DefWindowProcA(hWnd, msg, wParam, lParam);
 }
@@ -37,12 +58,7 @@ pub fn main() !void {
 		.hIconSm = null,
 	};
 
-	if  ( user32.RegisterClassExA( &wc ) == 0 ) 
-	{
-		switch (win.GetLastError()) {
-            else => |err| return win.unexpectedError(err),
-        }
-	}
+	try user32.RegisterClassExA( &wc );
 
 	const hwnd = user32.CreateWindowExA( 
 		0,
@@ -50,7 +66,7 @@ pub fn main() !void {
 		"ImGui Standalone",
 		user32.WS_OVERLAPPEDWINDOW,
 		100, 100,
-		2000, 2000,
+		1280, 800,
 		null, null,
 		@ptrCast( wc.hInstance ), null
 	);
@@ -63,7 +79,7 @@ pub fn main() !void {
 	const gfx = setupVulkan( arena, extensions[0..], hwnd );
 
 	var wd = vk.ImGui_ImplVulkanH_Window{};
-	setupVulkanWindow( &wd, gfx, 50, 50 );
+	setupVulkanWindow( &wd, gfx, 1280, 800 );
 
 
 	imgui.CreateContext();
@@ -94,16 +110,19 @@ pub fn main() !void {
 	_ = user32.ShowWindow( hwnd, user32.SW_SHOWDEFAULT );
 	assert( user32.UpdateWindow( hwnd ) != 0 );
 
-
-	core_loop: while ( true )
+	var quit = false;
+	while ( true )
 	{
-		while( user32.PeekMessageA( null, 0, 0, 1 ) ) |msg|
+		while( user32.PeekMessageA( null, 0, 0, .REMOVE ) ) |msg|
 		{
+
 			_ = user32.TranslateMessage(&msg);
 			_ = user32.DispatchMessageA(&msg);
 			if (msg.message == .WM_QUIT) // WM_QUIT
-				break :core_loop;
+				quit = true;
 		}
+
+		if (quit) break;
 
 		const area = try user32.GetClientRect( hwnd );
 
@@ -115,6 +134,8 @@ pub fn main() !void {
 
 		imgui.r.ImGui_NewFrame();
 
+
+
 		var window_flags = imgui.r.ImGuiWindowFlags_MenuBar | imgui.r.ImGuiWindowFlags_NoDocking;
 		window_flags |= imgui.r.ImGuiWindowFlags_NoTitleBar | imgui.r.ImGuiWindowFlags_NoCollapse | imgui.r.ImGuiWindowFlags_NoResize | imgui.r.ImGuiWindowFlags_NoMove;
 		window_flags |= imgui.r.ImGuiWindowFlags_NoBringToFrontOnFocus | imgui.r.ImGuiWindowFlags_NoNavFocus;
@@ -125,10 +146,22 @@ pub fn main() !void {
 		imgui.SetNextWindowSize( .{ .size = viewport.*.WorkSize } );
 		imgui.SetNextWindowViewport( viewport.*.ID );
 
-		imgui.Begin("test tp", null, window_flags);
+		_ = imgui.Begin( "test tp", null, window_flags );
 
-		const dockspace_id = imgui.GetIDStr("MyDockSpace");
+		const dockspace_id = imgui.GetIDStr( "MyDockSpace" );
 		_ = imgui.DockSpace(.{ .dockspace_id = dockspace_id } );
+
+		if ( imgui.BeginMenuBar() ) {
+			if ( imgui.BeginMenu( "File" ) ) {
+				if ( imgui.MenuItem( .{ .label = "Load" } ) )
+				{ 
+
+				}
+			
+				imgui.EndMenu();
+			}
+			imgui.EndMenuBar();
+		}
 
 		var show_demo_window: bool = true;
 		imgui.ShowDemoWindow(&show_demo_window);
@@ -275,14 +308,14 @@ fn setupVulkanWindow( wd: *vk.ImGui_ImplVulkanH_Window, gfx: GfxInstance, width:
 	}
 
 	// Select Surface Format
-    const requestSurfaceImageFormat = &[_]c_uint{
+	const requestSurfaceImageFormat = &[_]c_uint{
 		vk.VK_FORMAT_B8G8R8A8_UNORM,
 		vk.VK_FORMAT_R8G8B8A8_UNORM,
 		vk.VK_FORMAT_B8G8R8_UNORM,
 		vk.VK_FORMAT_R8G8B8_UNORM
 	};
-    const requestSurfaceColorSpace: vk.VkColorSpaceKHR = vk.VK_COLORSPACE_SRGB_NONLINEAR_KHR;
-    wd.SurfaceFormat = vk.ImGui_ImplVulkanH_SelectSurfaceFormat( gfx.phy_device, gfx.surface, requestSurfaceImageFormat, requestSurfaceImageFormat.len, requestSurfaceColorSpace);
+	const requestSurfaceColorSpace: vk.VkColorSpaceKHR = vk.VK_COLORSPACE_SRGB_NONLINEAR_KHR;
+	wd.SurfaceFormat = vk.ImGui_ImplVulkanH_SelectSurfaceFormat( gfx.phy_device, gfx.surface, requestSurfaceImageFormat, requestSurfaceImageFormat.len, requestSurfaceColorSpace);
 
 	const present_modes = &[_]c_uint{ vk.VK_PRESENT_MODE_FIFO_KHR };
 	wd.PresentMode = vk.ImGui_ImplVulkanH_SelectPresentMode( gfx.phy_device, gfx.surface, present_modes, present_modes.len );
@@ -297,7 +330,7 @@ fn setupVulkan( _scratchArena: Arena.Arena, instance_extensions: []const [*:0]co
 	const createInfo : vk.VkInstanceCreateInfo = .{
 		.sType = vk.VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
 		.ppEnabledExtensionNames = instance_extensions.ptr,
-		.enabledExtensionCount = @truncate(instance_extensions.len)
+		.enabledExtensionCount = @truncate( instance_extensions.len )
 	};
 
 	_ = vk.vkCreateInstance( &createInfo, null, &instance );
@@ -372,6 +405,8 @@ fn setupVulkan( _scratchArena: Arena.Arena, instance_extensions: []const [*:0]co
 		.surface = surface,
 	};
 }
+
+
 
 
 

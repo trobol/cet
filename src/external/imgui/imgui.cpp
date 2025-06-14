@@ -1994,11 +1994,16 @@ void ImStrncpy(char* dst, const char* src, size_t count)
     dst[count - 1] = 0;
 }
 
+char* ImStrdup(const char* str, size_t len)
+{
+    void* buf = IM_ALLOC(len + 1);
+    return (char*)memcpy(buf, (const void*)str, len + 1);
+}
+
 char* ImStrdup(const char* str)
 {
     size_t len = strlen(str);
-    void* buf = IM_ALLOC(len + 1);
-    return (char*)memcpy(buf, (const void*)str, len + 1);
+    return ImStrdup(str, len);
 }
 
 char* ImStrdupcpy(char* dst, size_t* p_dst_size, const char* src)
@@ -4053,7 +4058,7 @@ void ImGui::CallContextHooks(ImGuiContext* ctx, ImGuiContextHookType hook_type)
 //-----------------------------------------------------------------------------
 
 // ImGuiWindow is mostly a dumb struct. It merely has a constructor and a few helper methods
-ImGuiWindow::ImGuiWindow(ImGuiContext* ctx, const char* name) : DrawListInst(NULL)
+ImGuiWindow::ImGuiWindow(ImGuiContext* ctx, const char* name, const char* name_end) : DrawListInst(NULL)
 {
     memset(this, 0, sizeof(*this));
     Ctx = ctx;
@@ -6110,9 +6115,9 @@ ImGuiWindow* ImGui::FindWindowByID(ImGuiID id)
     return (ImGuiWindow*)g.WindowsById.GetVoidPtr(id);
 }
 
-ImGuiWindow* ImGui::FindWindowByName(const char* name)
+ImGuiWindow* ImGui::FindWindowByName(const char* name, const char* name_end)
 {
-    ImGuiID id = ImHashStr(name);
+    ImGuiID id = ImHashStr(name, name_end ? ( name_end-name ) : 0);
     return FindWindowByID(id);
 }
 
@@ -6188,12 +6193,12 @@ static void InitOrLoadWindowSettings(ImGuiWindow* window, ImGuiWindowSettings* s
     }
 }
 
-static ImGuiWindow* CreateNewWindow(const char* name, ImGuiWindowFlags flags)
+static ImGuiWindow* CreateNewWindow(const char* name, const char* name_end, ImGuiWindowFlags flags)
 {
     // Create window the first time
     //IMGUI_DEBUG_LOG("CreateNewWindow '%s', flags = 0x%08X\n", name, flags);
     ImGuiContext& g = *GImGui;
-    ImGuiWindow* window = IM_NEW(ImGuiWindow)(&g, name);
+    ImGuiWindow* window = IM_NEW(ImGuiWindow)(&g, name, name_end);
     window->Flags = flags;
     g.WindowsById.SetVoidPtr(window->ID, window);
 
@@ -7057,6 +7062,11 @@ ImGuiWindow* ImGui::FindBlockingModal(ImGuiWindow* window)
 // - Passing 'bool* p_open' displays a Close button on the upper-right corner of the window, the pointed value will be set to false when the button is pressed.
 bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 {
+	return ImGui::Begin(name, NULL, p_open, flags);
+}
+
+bool ImGui::Begin(const char* name, const char* name_end, bool* p_open, ImGuiWindowFlags flags)
+{
     ImGuiContext& g = *GImGui;
     const ImGuiStyle& style = g.Style;
     IM_ASSERT(name != NULL && name[0] != '\0');     // Window name required
@@ -7064,10 +7074,10 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
     IM_ASSERT(g.FrameCountEnded != g.FrameCount);   // Called ImGui::Render() or ImGui::EndFrame() and haven't called ImGui::NewFrame() again yet
 
     // Find or create
-    ImGuiWindow* window = FindWindowByName(name);
+    ImGuiWindow* window = FindWindowByName(name, name_end);
     const bool window_just_created = (window == NULL);
     if (window_just_created)
-        window = CreateNewWindow(name, flags);
+        window = CreateNewWindow(name, name_end, flags);
 
     // [DEBUG] Debug break requested by user
     if (g.DebugBreakInWindow == window->ID)

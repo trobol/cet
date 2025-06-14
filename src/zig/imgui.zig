@@ -15,10 +15,35 @@ pub const win = @cImport({
 
 
 pub const GetMainViewport = r.ImGui_GetMainViewport;
-pub const Begin = r.ImGui_Begin;
 pub const End = r.ImGui_End;
 pub const Render = r.ImGui_Render;
 pub const CreateContext = r.ImGui_CreateContext;
+pub const BeginMenuBar = r.ImGui_BeginMenuBar;
+pub const EndMenu = r.ImGui_EndMenu;
+pub const EndMenuBar = r.ImGui_EndMenuBar;
+
+
+pub fn MenuItem( args: struct {
+	label: []const u8,
+	selected: bool = false,
+	enabled: bool = true
+}) bool 
+{
+	// TODO: shortcut and icon
+	return r.ImGui_MenuItemEx( args.label.ptr, args.label.ptr + args.label.len, null, args.selected, args.enabled );
+}
+
+pub fn BeginMenu( name: []const u8 ) bool
+{
+	return r.ImGui_BeginMenu( name.ptr, name.ptr + name.len, true );
+}
+
+
+pub fn Begin( name: []const u8, p_open: ?*bool, flags: c_int ) bool
+{
+	return r.ImGui_Begin( name.ptr, name.ptr + name.len, p_open, flags );
+}
+
 
 pub const ShowDemoWindow = r.ImGui_ShowDemoWindow;
 
@@ -62,6 +87,8 @@ pub fn DockSpace( args: struct {
 {
 	return ImGui_DockSpace( args.dockspace_id, args.size, args.flags, args.window_class );
 }
+
+
 
 
 pub const SetNextWindowViewport = ImGui_SetNextWindowViewport;

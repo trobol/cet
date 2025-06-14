@@ -28,9 +28,9 @@ ImGuiViewport* ImGui_GetMainViewport()
 }
 
 
-void ImGui_Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
+bool ImGui_Begin(const char* name, const char* name_end, bool* p_open, ImGuiWindowFlags flags)
 {
-	ImGui::Begin(name, p_open, flags);
+	return ImGui::Begin(name, name_end, p_open, flags);
 }
 
 void ImGui_End()
@@ -38,14 +38,41 @@ void ImGui_End()
 	ImGui::End();
 }
 
+bool ImGui_BeginMenuBar()
+{
+	return ImGui::BeginMenuBar();
+}
+
+void ImGui_EndMenuBar()
+{
+	ImGui::EndMenuBar();
+}
+
+bool ImGui_BeginMenu( const char* label, const char* label_end, bool enabled )
+{
+	return ImGui::BeginMenuEx( label, label_end, NULL, enabled );
+}
+
+void ImGui_EndMenu()
+{
+	return ImGui::EndMenu();
+}
+
+bool ImGui_MenuItemEx(const char* label, const char* label_end, const char* shortcut, bool selected, bool enabled)
+{	
+	// TODO: figure out what icon is doing here
+	return ImGui::MenuItemEx( label, label_end, NULL, shortcut, selected, enabled );
+}
+
+
 void ImGui_TextEx(const char* text, const char* text_end, ImGuiTextFlags flags)
 {
 	ImGui::TextEx(text, text_end, flags);
 }
 
-bool ImGui_Checkbox(const char* label, bool* v)
+bool ImGui_Checkbox(const char* label, const char* label_end, bool* v)
 {
-	return ImGui::Checkbox(label, v);
+	return ImGui::Checkbox(label, label_end, v);
 }
 
 bool ImGui_SliderScalarN(const char* label, ImGuiDataType data_type, void* v, int components, const void* v_min, const void* v_max, const char* format, ImGuiSliderFlags flags)

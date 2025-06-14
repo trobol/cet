@@ -64,8 +64,19 @@ pub const MSG = extern struct {
 	pt: POINT,
 
 
-	const MESSAGE = enum(UINT) {
-		WM_QUIT = 0x0012,
+	pub const MESSAGE = enum(UINT) {
+		WM_NULL =		0x0000,
+		WM_CREATE =		0x0001,
+		WM_DESTROY =	0x0002,
+		WM_MOVE =		0x0003,
+		WM_SIZE =		0x0005,
+
+		WM_ACTIVATE =	0x0006,
+
+		
+		WM_QUIT =		0x0012,
+
+		WM_SYSCOMMAND =	0x0112,
 		_
 	};
 };
@@ -142,7 +153,6 @@ pub const SW_FORCEMINIMIZE     : INT = 11;
 pub const SW_MAX               : INT = 11;
 
 
-pub const RegisterClassExA = raw.RegisterClassExA;
 pub const CreateWindowExA = raw.CreateWindowExA;
 pub const ShowWindow = raw.ShowWindow;
 pub const UpdateWindow = raw.UpdateWindow;
@@ -150,18 +160,38 @@ pub const DispatchMessageA = raw.DispatchMessageA;
 pub const TranslateMessage = raw.TranslateMessage;
 pub const DefWindowProcA = raw.DefWindowProcA;
 pub const GetModuleHandleA = raw.GetModuleHandleA;
+pub const PostQuitMessage = raw.PostQuitMessage;
 
+
+pub const PeekMessageOption = enum(UINT) {
+	NOREMOVE          = 0x0000,
+	REMOVE            = 0x0001,
+	NOYIELD           = 0x0002,
+};
 
 // Dispatches incoming nonqueued messages, checks the thread message queue for a posted message, and retrieves the message (if any exist).
-pub fn PeekMessageA( hWnd: ?HWND, wMsgFilterMin: UINT, wMsgFilterMax: UINT, wRemoveMsg: UINT ) ?MSG
+pub fn PeekMessageA( hWnd: ?HWND, wMsgFilterMin: UINT, wMsgFilterMax: UINT, wRemoveMsg: PeekMessageOption ) ?MSG
 {
 	var msg: MSG = undefined;
-	if ( raw.PeekMessageA( &msg, hWnd, wMsgFilterMin, wMsgFilterMax, wRemoveMsg ) != 0 )
+	if ( raw.PeekMessageA( &msg, hWnd, wMsgFilterMin, wMsgFilterMax, @intFromEnum( wRemoveMsg ) ) != 0 )
 	{
 		return msg;
 	}
 	return null;
 }
+
+
+pub fn RegisterClassExA( param1: *const WNDCLASSEXA ) !void
+{
+	if ( raw.RegisterClassExA( param1 ) == 0 ) 
+	{
+		switch ( win.GetLastError() ) {
+			else => |err| return win.unexpectedError(err),
+		}
+	}
+}
+
+
 
 pub fn GetClientRect( hWnd: HWND ) error{Unexpected}!RECT
 {
@@ -172,6 +202,7 @@ pub fn GetClientRect( hWnd: HWND ) error{Unexpected}!RECT
 			else => |err| return win.unexpectedError(err),
 		}
 	}
+	
 	return rect;
 }
 
@@ -193,4 +224,6 @@ pub const raw = struct {
 	pub extern "user32" fn GetModuleHandleA( lpModuleName: ?LPCSTR ) callconv(WINAPI) HMODULE;
 
 	pub extern "user32" fn GetClientRect( hWnd: HWND, lpRect: *RECT ) callconv(WINAPI) BOOL;
+
+	pub extern "user32" fn PostQuitMessage( nExitCode: c_int ) callconv(WINAPI) void;
 };
