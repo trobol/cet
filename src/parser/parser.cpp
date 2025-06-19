@@ -32,8 +32,10 @@ static cl::OptionCategory MyToolCategory("my-tool options");
 static cl::opt<std::string> arg_Path("path", cl::desc("Specify path"), cl::value_desc("path"), cl::cat(MyToolCategory));
 cl::opt<std::string> arg_None(cl::Positional, cl::desc("<regular expression>"), cl::cat(MyToolCategory)); 
 static cl::opt<bool> arg_DumpAST("dump-ast", cl::desc("bool"), cl::cat(MyToolCategory));
+static cl::opt<bool> arg_NullHypothisis("null-hypothisis", cl::desc("bool"), cl::cat(MyToolCategory));
 
 int traverseAst(clang::tooling::ClangTool* tool, const std::string& db_name);
+int traverseAstNullTest( clang::tooling::ClangTool* tool, const std::string& db_name );
 int dumpAst( clang::tooling::ClangTool* tool );
 
 void AttachCrashHandler();
@@ -79,6 +81,10 @@ int main(int argc, const char **argv) {
 	char buf[1024];
 	sprintf(buf, "%llu.db", ms.count());
 
+	if (arg_NullHypothisis)
+	{
+		traverseAstNullTest( &Tool, std::string(buf));
+	}
 
 	return traverseAst(&Tool, std::string(buf));
 }

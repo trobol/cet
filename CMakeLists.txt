@@ -29,6 +29,7 @@ target_link_libraries(External_lib_clang
 		clangSerialization
 		clangDriver
 		clangTooling
+		clangToolingASTDiff
 		clangParse
 		clangSema
 		clangStaticAnalyzerFrontend
@@ -58,7 +59,7 @@ target_link_libraries(sqlite_shell
 )
 
 add_executable(viewer WIN32
-	src/viewer/viewer.cpp
+	
 	src/external/imgui/imgui_impl_vulkan.cpp
 	src/external/imgui/imgui_impl_win32.cpp
 	src/external/imgui/imgui.cpp
@@ -66,7 +67,9 @@ add_executable(viewer WIN32
 	src/external/imgui/imgui_draw.cpp
 	src/external/imgui/imgui_tables.cpp
 	src/external/imgui/imgui_demo.cpp
+	src/viewer/viewer.cpp
 )
+
 target_include_directories(viewer
 	PRIVATE
 	src/external/imgui
@@ -81,16 +84,38 @@ target_link_libraries(viewer
 )
 
 
-#add_compile_options(/Bt+)
-add_executable(clang-tool-test
-	src/parser/parser.cpp
+
+add_library( clang_tool_lib SHARED
 	src/parser/ast_traversal.cpp
+	src/parser/virtual_alloc.cpp
+	src/parser/ast_dump.cpp
 )
 
-target_link_libraries(clang-tool-test
+#set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDebug)
+
+
+#set_property( TARGET clang_tool_lib PROPERTY MSVC_RUNTIME_LIBRARY MultiThreaded)
+
+target_include_directories(clang_tool_lib PUBLIC
+		${LLVM_INCLUDE_DIRS}
+		${CLANG_INCLUDE_DIRS}	
+)
+
+target_link_libraries(clang_tool_lib
 	PUBLIC
 		External_lib_clang
 		External_lib_sqlite3
+
+)
+
+
+#add_compile_options(/Bt+)
+add_executable(clang-tool-test
+	src/parser/parser.cpp
+	src/parser/virtual_alloc.cpp
+	src/parser/ast_traversal.cpp
+	src/parser/ast_dump.cpp
+	src/parser/crash_handler.cpp
 )
 
 target_include_directories(clang-tool-test SYSTEM
@@ -99,3 +124,12 @@ target_include_directories(clang-tool-test SYSTEM
 		${CLANG_INCLUDE_DIRS}	
 )
 
+target_link_libraries(clang-tool-test
+	PUBLIC
+		External_lib_clang
+		External_lib_sqlite3
+		user32
+		kernel32 
+)
+
+#write_file( "libclang_path.txt" "${LLVM_INCLUDE_DIRS}" ";" "${CLANG_INCLUDE_DIRS}" )
