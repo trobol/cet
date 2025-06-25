@@ -41,6 +41,7 @@ target_link_libraries(External_lib_clang
 		clangAST
 		clangLex
 		clangBasic
+		LLVMSupport
 
 		${REQ_LLVM_LIBS}
 )
@@ -98,7 +99,8 @@ add_library( clang_tool_lib SHARED
 
 target_include_directories(clang_tool_lib PUBLIC
 		${LLVM_INCLUDE_DIRS}
-		${CLANG_INCLUDE_DIRS}	
+		${CLANG_INCLUDE_DIRS}
+		
 )
 
 target_link_libraries(clang_tool_lib
@@ -108,28 +110,3 @@ target_link_libraries(clang_tool_lib
 
 )
 
-
-#add_compile_options(/Bt+)
-add_executable(clang-tool-test
-	src/parser/parser.cpp
-	src/parser/virtual_alloc.cpp
-	src/parser/ast_traversal.cpp
-	src/parser/ast_dump.cpp
-	src/parser/crash_handler.cpp
-)
-
-target_include_directories(clang-tool-test SYSTEM
-	INTERFACE
-		${LLVM_INCLUDE_DIRS}
-		${CLANG_INCLUDE_DIRS}	
-)
-
-target_link_libraries(clang-tool-test
-	PUBLIC
-		External_lib_clang
-		External_lib_sqlite3
-		user32
-		kernel32 
-)
-
-#write_file( "libclang_path.txt" "${LLVM_INCLUDE_DIRS}" ";" "${CLANG_INCLUDE_DIRS}" )

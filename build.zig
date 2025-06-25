@@ -31,19 +31,19 @@ pub fn build(b: *std.Build) void {
     // running `zig build`).
     //b.installArtifact(lib);
 
-	
+	const build_dir = "build";
 	
 	var cmake_config = b.addSystemCommand( &.{ "cmake", ".." } );
-	cmake_config.setCwd( b.path( "build" ) );
+	cmake_config.setCwd( b.path( build_dir ) );
 
 	var cmake_build = b.addSystemCommand( &.{ "cmake", "--build", "." } );
-	cmake_build.setCwd( b.path( "build" ) );
+	cmake_build.setCwd( b.path( build_dir ) );
 	cmake_build.step.dependOn( &cmake_config.step );
 
-	const dynlib = b.addInstallBinFile( b.path("build/libclang_tool_lib.dll"), "libclang_tool_lib.dll" );
+	const dynlib = b.addInstallBinFile( b.path(build_dir ++ "/libclang_tool_lib.dll"), "libclang_tool_lib.dll" );
 	dynlib.step.dependOn( &cmake_build.step );
 	b.getInstallStep().dependOn( &dynlib.step );
-	const dynlib_sym = b.addInstallBinFile( b.path("build/libclang_tool_lib.pdb"), "libclang_tool_lib.pdb" );
+	const dynlib_sym = b.addInstallBinFile( b.path( build_dir ++ "/libclang_tool_lib.pdb"), "libclang_tool_lib.pdb" );
 	dynlib_sym.step.dependOn( &cmake_build.step );
 	b.getInstallStep().dependOn( &dynlib_sym.step );
 
@@ -125,6 +125,16 @@ pub fn build(b: *std.Build) void {
 	ld.addIncludePath( b.path("src/") );
 	ld.step.dependOn( &cmake_build.step );
 	b.installArtifact( ld );
+
+	const dump = b.addExecutable(.{
+			.name = "cet-dump",
+			.root_source_file = b.path("src/parser/cet-dump.zig"),
+			.target = target,
+			.optimize = optimize,
+	});
+	dump.addIncludePath( b.path("src/") );
+	dump.step.dependOn( &cmake_build.step );
+	b.installArtifact( dump );
 
 	//exe.addIncludePath( .{ .cwd_relative = "/Program Files (x86)/Windows Kits/10/include/10.0.22621.0/um/"});
 	//exe.linkLibC();

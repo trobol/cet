@@ -51,20 +51,35 @@ typedef struct ParsedItemInfo
 	// todo: source location
 } ParsedItemInfo;
 
+typedef struct Node {
+	u64 id;
+	u64 string_hash;
+} Node;
 
+typedef struct Connection {
+	u64 from;
+	u64 to;
+} Connection;
 
 typedef struct ParsedModuleInfo ParsedModuleInfo;
 
-struct Slice_ParsedItemInfo { ParsedItemInfo* ptr; u64 len; };
-EXPORTED struct Slice_ParsedItemInfo ParsedModuleInfo_getItems( ParsedModuleInfo* minfo );
+struct Slice_Node { Node* ptr; u64 len; };
+EXPORTED struct Slice_Node ParsedModuleInfo_getNodes( ParsedModuleInfo* minfo );
+struct Slice_Connection { Connection* ptr; u64 len; };
+EXPORTED struct Slice_Connection ParsedModuleInfo_getConnections( ParsedModuleInfo* minfo );
 
 struct Slice_Byte { const char* ptr; u64 len; };
 EXPORTED struct Slice_Byte ParsedModuleInfo_getTextCache( ParsedModuleInfo* minfo );
 
 EXPORTED void ParsedModuleInfo_deinit( ParsedModuleInfo* minfo );
 
+typedef struct RecorderInterface {
+	void* ud;
+	void (*addNode)( void* ud, i64 id, const char* str, u64 str_len );
+	void (*addConnection)( void* ud, i64 from, i64 to );
+} RecorderInterface;
 
-
-EXPORTED ParsedModuleInfo* parseFromArgs( u64 argc, const char* argv[] );
+EXPORTED void parseFromArgs( RecorderInterface interface, u64 argc, const char* argv[] );
 EXPORTED ParsedModuleInfo* parseFromDB( const char* path );
+EXPORTED void dumpFromArgs( u64 argc, const char* argv[] );
 

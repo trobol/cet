@@ -2,6 +2,8 @@
 #include <clang/Tooling/Tooling.h>
 #include <clang/Tooling/ASTDiff/ASTDiff.h>
 
+#include "clang.h"
+
 static void printNode(clang::raw_ostream &OS, clang::diff::SyntaxTree &Tree,
                       clang::diff::NodeId Id) {
   if (Id.isInvalid()) {
@@ -24,16 +26,14 @@ static void printTree(clang::raw_ostream &OS, clang::diff::SyntaxTree &Tree) {
   }
 }
 
-int dumpAst( clang::tooling::ClangTool* tool )
+int dumpAst( clang::ASTContext& ctx )
 {
-	std::vector<std::unique_ptr<clang::ASTUnit>> ASTs;
-  	tool->buildASTs(ASTs);
 
-	for ( auto& ast : ASTs )
-	{
-		//clang::diff::SyntaxTree Tree(ast->getASTContext());
-		//printTree(llvm::outs(), Tree);
-	}
+	clang::diff::SyntaxTree Tree(ctx);
+	printTree(llvm::outs(), Tree);
 
 	return 0;
 }
+
+
+

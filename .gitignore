@@ -1,4 +1,5 @@
 build/
+build_debug/
 .zig-cache/
 .cache/
 *.exe
@@ -6,3 +7,4 @@ build/
 *.pdb
 imgui.ini
 zig-out/
+*.cetobj

@@ -13,140 +13,9 @@
 
 #include <clang/Tooling/CompilationDatabase.h>
 
-#include <sqlite3.h>
-
 #include "clang.h"
 
 #include <clang/Frontend/Utils.h>
-
-
-
-static int sql_callback(void *NotUsed, int argc, char **argv, char **azColName){
-	int i;
-	for(i=0; i<argc; i++){
-		printf("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
-	}
-	printf("\n");
-	return 0;
-}
-
-void sql_run_raw(sqlite3 *db, const char* cmd)
-{
-	char *zErrMsg = 0;
-	int rc = sqlite3_exec(db, cmd, sql_callback, 0, &zErrMsg);
-	if (rc != SQLITE_OK) 
-	{
-		fprintf(stderr, "SQL error: %s\n", zErrMsg);
-		sqlite3_free(zErrMsg);
-		exit(EXIT_FAILURE);
-	}
-}
-
-template <typename T>
-int sql_bind( sqlite3_stmt *stmt, int idx, T value);
-
-template <>
-int sql_bind<const char*>( sqlite3_stmt *stmt, int idx, const char* value)
-{
-	return sqlite3_bind_text(stmt, idx, value, -1, NULL);
-}
-
-template <>
-int sql_bind<char*>( sqlite3_stmt *stmt, int idx, char* value)
-{
-	return sqlite3_bind_text(stmt, idx, value, -1, NULL);
-}
-
-template <>
-int sql_bind<int64_t>( sqlite3_stmt *stmt, int idx, int64_t value)
-{
-	return sqlite3_bind_int64(stmt, idx, value);
-}
-
-template <typename...Args>
-int sql_stmt_bind(sqlite3_stmt *stmt, Args... args)
-{
-	return sql_stmt_bind_impl( stmt, 1, args...);
-}
-
-
-template <typename T>
-int sql_stmt_bind_impl(sqlite3_stmt *stmt, int idx, T arg0)
-{
-	int rc = sql_bind(stmt, idx, arg0);
-	if (rc != SQLITE_OK) {
-		fprintf(stderr, "SQL bind %i failed %i\n", idx, rc);
-	}
-	return rc;
-}
-
-
-template <typename T, typename...Args>
-int sql_stmt_bind_impl(sqlite3_stmt *stmt, int idx, T arg0, Args... args)
-{
-	int rc = sql_stmt_bind_impl( stmt, idx, arg0 );
-	if (rc != SQLITE_OK) {
-		return rc;
-	}
-	return sql_stmt_bind_impl( stmt, idx + 1, args...);
-}
-
-template <typename...Args>
-void sql_run_stmt(sqlite3_stmt *stmt, Args... args)
-{
-	int rc;
-	rc = sql_stmt_bind(stmt, args...);
-	
-	while( 1 ) {
-		rc = sqlite3_step(stmt);
-		if (rc == SQLITE_DONE) break;
-		if (rc == SQLITE_BUSY) continue;
-		if (rc == SQLITE_ERROR) 
-		{
-			fprintf(stderr, "SQL error while running query");
-			return;
-		}
-	}
-
-	sqlite3_reset(stmt);
-}
-
-
-void sql_add_node(sqlite3_stmt *stmt, int64_t id, int64_t parent_id, const char* text)
-{
-	fprintf( stderr, "%lli %lli %s\n", id, parent_id, text);
-	int rc;
-	rc = sql_bind(stmt, 1, id);
-	if (rc != SQLITE_OK) {
-		fprintf(stderr, "SQL bind 1 failed %i\n", rc);
-	}
-
-	rc = sql_bind(stmt, 2, parent_id);
-	if (rc != SQLITE_OK)
-	{
-		fprintf(stderr, "SQL bind 2 failed %i\n", rc);
-	}
-
-	rc = sql_bind(stmt, 3, text);
-	if (rc != SQLITE_OK)
-	{
-		fprintf(stderr, "SQL bind 3 failed %i\n", rc);
-	}
-
-	while( 1 ) {
-		rc = sqlite3_step(stmt);
-		if (rc == SQLITE_DONE) break;
-		if (rc == SQLITE_BUSY) continue;
-		if (rc == SQLITE_ERROR) 
-		{
-			fprintf(stderr, "SQL error while running query");
-			return;
-		}
-	}
-
-	sqlite3_reset(stmt);
-}
-
 
 void* OS_MemReserve( size_t size );
 void OS_MemFree( void* ptr );
@@ -239,15 +108,21 @@ public:
 
 struct ParsedModuleInfo
 {
-	InfiniteArray<ParsedItemInfo> infos;
-	InfiniteTextBuffer text_buf;
+	InfiniteArray<Node> nodes;
+	InfiniteArray<Connection> connections;
+	InfiniteTextBuffer text_buf; // TODO: make this a hashmap + allocator
 };
 
-
-Slice_ParsedItemInfo ParsedModuleInfo_getItems( ParsedModuleInfo* minfo )
+EXPORTED struct Slice_Node ParsedModuleInfo_getNodes( ParsedModuleInfo* minfo )
 {
-	return { minfo->infos.data(), minfo->infos.size() };
+	return { minfo->nodes.data(), minfo->nodes.size() };
 }
+
+EXPORTED struct Slice_Connection ParsedModuleInfo_getConnections( ParsedModuleInfo* minfo )
+{
+	return { minfo->connections.data(), minfo->connections.size() };
+}
+
 
 Slice_Byte ParsedModuleInfo_getTextCache( ParsedModuleInfo* minfo )
 {
@@ -256,34 +131,24 @@ Slice_Byte ParsedModuleInfo_getTextCache( ParsedModuleInfo* minfo )
 
 void ParsedModuleInfo_deinit( ParsedModuleInfo* minfo )
 {
-	minfo->infos.deinit();
-	minfo->text_buf.deinit();
+	minfo->nodes.deinit();
+	minfo->connections.deinit();
+	delete minfo;
 }
 
 class Recorder {
-	
-	Recorder() : output{InfiniteArray<ParsedItemInfo>::Init(), InfiniteArray<char>::Init()} {}
-
 public:
-	void record( int64_t id, int64_t parent_id, std::string_view name )
+	RecorderInterface interface;
+	void addNode( int64_t id, std::string_view identifier )
 	{
-		const char* copy = output.text_buf.dupe( name.data(), name.size() );
-		output.infos.push_back(ParsedItemInfo{id, parent_id, copy});
+		interface.addNode( interface.ud, id, identifier.data(), identifier.size() );
 	}
 
-	struct Item 
+	void addConnection( int64_t from, int64_t to )
 	{
-		int64_t id;
-		int64_t parent_id;
-		const char* text;
-	};
-	
-	ParsedModuleInfo output;
-
-	static Recorder Init( )
-	{
-		return Recorder();
+		interface.addConnection( interface.ud, from, to );
 	}
+
 };
 
 
@@ -327,7 +192,7 @@ public:
 	}
 
 	bool TraverseDecl(clang::Decl *D) {
-
+		if (!D) return true;
 		bool recordParent = D->getKind() != clang::Decl::Kind::Var;
 
 		ParentPopper pp = {};
@@ -336,8 +201,7 @@ public:
 			int64_t id = D->getCanonicalDecl()->getID();
 			pp = pushParent(D->getID());
 		}
-        clang::RecursiveASTVisitor<Visitor>::TraverseDecl(D); // Forward to base class
-		return true; // Return false to stop the AST analyzing
+		return clang::RecursiveASTVisitor<Visitor>::TraverseDecl(D);; // Return false to stop the AST analyzing
 	}
 
 	bool VisitNamedDecl(clang::NamedDecl *D)
@@ -362,7 +226,10 @@ public:
 		
 		llvm::SmallString<1024> usr_buf;
 		clang::index::generateUSRForDecl(D, usr_buf);
-		recorder->record( D->getID(), get_parent(), name );
+		int64_t id = D->getID();
+
+		recorder->addNode( id, name );
+		recorder->addConnection(id, get_parent());
 		return true;
 	}
 
@@ -386,9 +253,16 @@ public:
 	{
 		//if (pStmt == NULL) fprintf( stderr, "null statement\n");
 		//printf("%s %lli %s\n", indent + parentStack.size(), expr->getID(*Context), expr->getDecl()->getName().data());
-		recorder->record(expr->getID(*Context), parentStack.back(), expr->getDecl()->getName().data()); 
-		
+		int64_t id = expr->getID(*Context);
+		recorder->addNode( id, expr->getDecl()->getNameAsString().data()); 
+		recorder->addConnection( id, parentStack.back());
 		return false;
+	}
+
+	bool VisitExpr(clang::Expr *expr)
+	{
+		
+		return true;
 	}
 
 
@@ -410,61 +284,6 @@ public:
 };
 
 
-class AstQueuer : public clang::tooling::ToolAction {
-
-	using Queue = std::vector<std::unique_ptr<clang::ASTUnit>>;
-
-	std::vector<std::unique_ptr<clang::ASTUnit>> *m_queue;
-
-public:
-
-	AstQueuer( Queue* queue ) : m_queue{queue} {}
-
-	
-	bool runInvocation(std::shared_ptr<clang::CompilerInvocation> Invocation,
-                     clang::FileManager *Files,
-                     std::shared_ptr<clang::PCHContainerOperations> PCHContainerOps,
-                     clang::DiagnosticConsumer *DiagConsumer) override {
-    std::unique_ptr<clang::ASTUnit> AST = clang::ASTUnit::LoadFromCompilerInvocation(
-        Invocation, std::move(PCHContainerOps),
-        clang::CompilerInstance::createDiagnostics(&Invocation->getDiagnosticOpts(),
-                                            DiagConsumer,
-                                            /*ShouldOwnClient=*/false),
-        Files);
-    if (!AST)
-      return false;
-
-    m_queue->emplace_back(std::move(AST));
-    return true;
-  }
-
-};
-
-int traverseAst( clang::tooling::ClangTool* tool, const std::string& db_name )
-{
-
-	Recorder recorder = Recorder::Init();
-	std::vector<std::unique_ptr<clang::ASTUnit>> ASTs;
-	tool->buildASTs(ASTs);
-
-	for ( auto& ast : ASTs )
-	{
-		clang::ASTContext* context = &ast->getASTContext();
-		Visitor::RecordAst( &recorder, context );
-	}
-
-	return 0;
-}
-
-int traverseAstNullTest( clang::tooling::ClangTool* tool, const std::string& db_name )
-{
-
-	Recorder recorder = Recorder::Init();
-	std::vector<std::unique_ptr<clang::ASTUnit>> ASTs;
-	tool->buildASTs(ASTs);
-	return 0;
-}
-
 struct CompileDatabase
 {
 	InfiniteTextBuffer text;
@@ -482,6 +301,7 @@ EXPORTED void CompileDatabase_deinit( CompileDatabase* db )
 	db->text.deinit();
 	db->argv.deinit();
 	db->commands.deinit();
+	delete db;
 }
 
 EXPORTED CompileDatabase* parseDB( const char* directory, const char** err )
@@ -532,7 +352,7 @@ EXPORTED CompileDatabase* parseDB( const char* directory, const char** err )
 }
 
 // TODO: look at  ASTUnit::LoadFromCommandLine and see if there is anything missing
-EXPORTED ParsedModuleInfo* parseFromArgs( size_t argc, const char* argv[] )
+EXPORTED void parseFromArgs( RecorderInterface interface, u64 argc, const char* argv[] )
 {
 
 		// fixme: do I need to use injectResourceDir here?
@@ -556,10 +376,23 @@ EXPORTED ParsedModuleInfo* parseFromArgs( size_t argc, const char* argv[] )
 		""
 		);
 
-	Recorder recorder = Recorder::Init();
-	Visitor::RecordAst( &recorder, &ast->getASTContext() );
 
-	return new ParsedModuleInfo( recorder.output );
+	Recorder recorder = Recorder{interface};
+	Visitor::RecordAst( &recorder, &ast->getASTContext() );
+}
+
+int dumpAst( clang::ASTContext& ctx );
+EXPORTED void dumpFromArgs( u64 argc, const char* argv[] )
+{
+	std::unique_ptr<clang::ASTUnit> ast = clang::ASTUnit::LoadFromCommandLine( 
+	argv, argv + argc,
+	std::make_shared<clang::PCHContainerOperations>(),
+	clang::CompilerInstance::createDiagnostics(new clang::DiagnosticOptions),
+	""
+	);
+
+	dumpAst( ast->getASTContext() );
+	
 }
 
 EXPORTED ParsedModuleInfo* parseFromDB( const char* path )
