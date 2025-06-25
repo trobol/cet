@@ -1,2 +1,2 @@
 @echo off
-zig rc %*
+zig c++ %*
