@@ -27,22 +27,44 @@ pub fn main() !u8
 	const path = options.args[0];
 	var reader = try ObjFile.Reader.open( path );
 
-	const header = try reader.readHeader();
-	const nodes = try reader.readNodes( allocator, header );
+	const nodes = try reader.readNodes( allocator );
 	defer allocator.free( nodes );
 
-	const connections = try reader.readConnections( allocator, header );
+	const connections = try reader.readConnections( allocator );
 	defer allocator.free( connections );
 
-	var strings = try reader.readStrings( allocator, header );
+	var strings = try reader.readStrings( allocator );
 	defer strings.deinit( allocator );
 
+	const linklinks = try reader.readLinkLinks( allocator );
+	defer allocator.free( linklinks );
+
+	var linknames = try reader.readLinkNames( allocator );
+	defer linknames.deinit( allocator );
+
+
+	std.debug.print( "{}\n", .{ reader.hdr } );
 
 	for (nodes) |node|
 	{
 		const id = node.id;
 		const str = strings.hashmap.get( node.string_hash ).?;
 		std.debug.print("{} {s}\n", .{ id, str });
+	}
+
+	for (linklinks) |link|
+	{
+		var node: ?*ObjFile.Node = null;
+		for (nodes) |*n|
+		{
+			if ( link.node_id == n.id ) {
+				node = n;
+			}
+		}
+
+		const str = if (node) |n| strings.hashmap.get( n.string_hash ).? else "????";
+		const linkname = linknames.hashmap.get( link.string_hash ).?;
+		std.debug.print("{s} {s}\n", .{ str, linkname });
 	}
 
 	return 0;
