@@ -77,6 +77,7 @@ typedef struct RecorderInterface {
 	void* ud;
 	void (*addNode)( void* ud, i64 id, const char* str, u64 str_len );
 	void (*addConnection)( void* ud, i64 from, i64 to );
+	void (*addLinkIdentifier)( void* ud, i64 id, const char* str, u64 str_len );
 } RecorderInterface;
 
 EXPORTED void parseFromArgs( RecorderInterface interface, u64 argc, const char* argv[] );

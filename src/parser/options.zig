@@ -7,7 +7,7 @@ const Type = std.builtin.Type;
 
 fn makeStorage( comptime spec: anytype ) type
 {
-    var fields: [spec.len]Type.StructField = undefined;
+	var fields: [spec.len]Type.StructField = undefined;
     for (spec,&fields) |t, *f| {
         f.* = .{
             .name = t[0],

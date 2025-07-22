@@ -34,6 +34,17 @@ fn is_at_end( self: *Arena, start: [*]u8, len: usize, size: usize ) bool
 }
 
 
+pub const ScratchArena = struct {
+	parent: *const Arena,
+
+	pub fn arena( self: ScratchArena ) Arena
+	{
+		return self.parent.*;
+	}
+
+	
+};
+
 
 pub const Arena: type = struct {
     start: [*]u8,

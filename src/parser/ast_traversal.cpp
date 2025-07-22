@@ -1,4 +1,5 @@
 #include <clang/AST/RecursiveASTVisitor.h>
+#include <clang/AST/Mangle.h>
 #include <clang/Tooling/Tooling.h>
 #include <clang/Tooling/CompilationDatabase.h>
 #include <clang/Frontend/CompilerInstance.h>
@@ -149,6 +150,10 @@ public:
 		interface.addConnection( interface.ud, from, to );
 	}
 
+	void addLinkIdentifier( int64_t id, std::string_view identifier )
+	{
+		interface.addLinkIdentifier( interface.ud, id, identifier.data(), identifier.size() );
+	}
 };
 
 
@@ -201,21 +206,29 @@ public:
 			int64_t id = D->getCanonicalDecl()->getID();
 			pp = pushParent(D->getID());
 		}
+
+
 		return clang::RecursiveASTVisitor<Visitor>::TraverseDecl(D);; // Return false to stop the AST analyzing
 	}
 
+
+	// TODO: is there any reason to visit non-named decls, 
+	// seems like most things count as "named" to clang, is there a definition of this in some standard?
 	bool VisitNamedDecl(clang::NamedDecl *D)
 	{	
+		// TODO: evaluate and write down what will be effected by this call
 		if (!D->isCanonicalDecl()) return true;
 
 		//D->getDeclName().dump();
 		const char* name = "";
+
+
 		clang::IdentifierInfo* info = D->getIdentifier();
 		if (info)
 		{
 			name = info->getNameStart();
 		}
-
+	
 		char params[256] = {};
 		clang::Decl::Kind kind = D->getKind();
 		if ( kind == clang::Decl::Kind::Function )
@@ -224,12 +237,48 @@ public:
 		}
 		
 		
-		llvm::SmallString<1024> usr_buf;
-		clang::index::generateUSRForDecl(D, usr_buf);
+		//llvm::SmallString<1024> usr_buf;
+		//clang::index::generateUSRForDecl(D, usr_buf);
 		int64_t id = D->getID();
 
 		recorder->addNode( id, name );
 		recorder->addConnection(id, get_parent());
+
+
+		// TAKEN FROM llvm JSONNodeDumper
+		// FIXME: There are likely other contexts in which it makes no sense to ask
+		// for a mangled name.
+		if (llvm::isa<clang::RequiresExprBodyDecl>(D->getDeclContext()))
+			return true;
+
+		// If the declaration is dependent or is in a dependent context, then the
+		// mangling is unlikely to be meaningful (and in some cases may cause
+		// "don't know how to mangle this" assertion failures.
+		if (D->isTemplated())
+			return true;
+
+		// Mangled names are not meaningful for locals, and may not be well-defined
+		// in the case of VLAs.
+		auto *VD = llvm::dyn_cast<clang::VarDecl>(D);
+		if (VD && VD->hasLocalStorage())
+			return true;
+
+		// Do not mangle template deduction guides.
+		if (llvm::isa<clang::CXXDeductionGuideDecl>(D))
+			return true;
+
+		
+		llvm::SmallString<1024> name_buf;
+		llvm::raw_svector_ostream stream(name_buf);
+		if ( astNameGenerator.writeName(D, stream) == false )
+		{
+			recorder->addLinkIdentifier( id, { name_buf.c_str(), name_buf.size() });
+		}
+
+		//std::vector<std::string> identifiers = astNameGenerator.getAllManglings( D );
+		//for ( std::string& str : identifiers ) {
+		//	recorder->addLinkIdentifier( id, str );
+		//}
 		return true;
 	}
 
@@ -270,10 +319,13 @@ public:
 		clang::RecursiveASTVisitor<Visitor>::TraverseType(x);
 		return true;
 	}
-	Visitor(Recorder *r, clang::ASTContext* c) : recorder{r}, Context{c} {};
+
+
+	Visitor(Recorder *r, clang::ASTContext* c) : recorder{r}, Context{c}, astNameGenerator{*c} {};
 	clang::ASTContext* Context;
 	std::vector<int64_t> parentStack;
 	Recorder* recorder;
+	clang::ASTNameGenerator astNameGenerator;
 
 
 	static void RecordAst( Recorder* recorder, clang::ASTContext* context )

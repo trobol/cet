@@ -105,6 +105,11 @@ fn makeRecorderType( T: type ) type
 			const recorder: T =  @ptrCast( @alignCast( ud.? ) );
 			recorder.addConnection( from,  to );
 		}
+
+		pub fn addLinkIdentifier( ud: ?*anyopaque, id: c_longlong, str: [*c]const u8, len: c_ulonglong ) callconv(.C) void {
+			const recorder: T =  @ptrCast( @alignCast( ud.? ) );
+			recorder.addLinkIdentifier( id, str[0..len] );
+		}
 	};
 }
 
@@ -118,7 +123,7 @@ pub fn parseDB( directory: [*c]const u8, err: [*c][*c]const u8 ) ?CompileDatabas
 pub fn parseFromArgs( recorder: anytype, args: [][*c]const u8 ) void
 {
 	const interface = makeRecorderType( @TypeOf( recorder) );
-	g_lib.parseFromArgs( .{ .ud = recorder, .addNode = &interface.addNode, .addConnection = &interface.addConnection }, args.len, args.ptr );
+	g_lib.parseFromArgs( .{ .ud = recorder, .addNode = &interface.addNode, .addConnection = &interface.addConnection, .addLinkIdentifier = &interface.addLinkIdentifier }, args.len, args.ptr );
 	//if ( module ) |ptr| return .{ .ptr = ptr };
 	//return null;
 }

@@ -1,26 +1,6 @@
 
 
-
-// signature        4 bytes cetdb
-// spec ver         4 bytes
-// file hash        8 bytes
-// file write time  8 bytes
-// item count      4 bytes
-// text block count 4 bytes (block is 1024 bytes)
-// file name
-// build args       4 bytes offset to text block
-
-// items
-
-
-// id              8 bytes
-// parent id       8 bytes
-// text id         8 bytes
-
-
-
-// text - big block of null terminated strings
-// maybe 
+// TODO: move linknames to a different data structure in storage, feels like 
 
 const std = @import("std");
 
@@ -41,8 +21,12 @@ pub const Header = extern struct {
 	connections_count: u64,
 	strings_len: u64,
 	strings_count: u32,
+	linklinks_count: u32,
+	linknames_len: u64,
+	linknames_count: u32
 };
 
+// program stuff, should be mostly shared between obj files and db files
 pub const Node = extern struct {
 	id: i64,
 	string_hash: u64
@@ -53,7 +37,12 @@ pub const Connection = extern struct {
 	to: i64
 };
 
-
+// link stuff, should only exist in link files
+// connect a node with a link name, more than one may exist for a single node
+pub const LinkLink = extern struct {
+	node_id: i64,
+	string_hash: u64,
+};
 
 
 
@@ -107,6 +96,17 @@ pub const Writer = struct {
 		return writer.writeAll( strings );
 	}
 
+	pub fn writeLinkLinks( self: *Writer, links: []LinkLink ) WriteError!void
+	{
+		const writer = self.buffer.writer();
+		return writer.writeAll( std.mem.sliceAsBytes( links ) );
+	}
+
+	pub fn writeLinkNames( self: *Writer, names: []const u8 ) WriteError!void
+	{
+		const writer = self.buffer.writer();
+		return writer.writeAll( names );
+	}
 };
 
 pub const Reader = struct {
@@ -115,7 +115,7 @@ pub const Reader = struct {
 	const OpenError = error{IncorrectHeader,IncorrectVersion} || std.fs.File.OpenError || ReadError;
 
 	buffer: BufferedReader,
-
+	hdr: Header,
 
 	pub fn open( path: []const u8 ) OpenError!Reader
 	{
@@ -139,7 +139,9 @@ pub const Reader = struct {
 			return error.IncorrectVersion;
 		}
 
-		return .{ .buffer = buf };
+		const hdr = try reader.readStruct( Header );
+
+		return .{ .buffer = buf, .hdr = hdr };
 	}
 
 	pub fn close( self: Reader ) void
@@ -147,26 +149,63 @@ pub const Reader = struct {
 		self.unbuffered_reader.context.close();
 	}
 
-	pub fn readHeader( self: *Reader ) !Header
+	pub fn readNodes( self: *Reader, allocator: std.mem.Allocator ) ReadError![]Node
 	{
-		const reader = self.buffer.reader();
-		return reader.readStruct( Header );
-	}
-
-	pub fn readNodes( self: *Reader, allocator: std.mem.Allocator, header: Header ) ReadError![]Node
-	{
-		const nodes = try allocator.alloc( Node, header.nodes_count );
+		const nodes = try allocator.alloc( Node, self.hdr.nodes_count );
 		const reader = self.buffer.reader();
 		try reader.readNoEof(std.mem.sliceAsBytes(nodes));
 		return nodes;
 	}
 
-	pub fn readConnections( self: *Reader, allocator: std.mem.Allocator, header: Header ) ReadError![]Connection
+	pub fn readConnections( self: *Reader, allocator: std.mem.Allocator ) ReadError![]Connection
 	{
-		const connections = try allocator.alloc( Connection, header.connections_count );
+		const connections = try allocator.alloc( Connection, self.hdr.connections_count );
 		const reader = self.buffer.reader();
 		try reader.readNoEof(std.mem.sliceAsBytes(connections));
 		return connections;
+	}
+
+	
+	pub fn readStrings( self: *Reader, allocator: std.mem.Allocator ) ReadError!StringTable
+	{
+		return self.readStringsInternal( allocator, self.hdr.strings_len, self.hdr.strings_count );
+	}
+
+
+	pub fn readLinkLinks( self: *Reader, allocator: std.mem.Allocator ) ReadError![]LinkLink
+	{
+		const links = try allocator.alloc( LinkLink, self.hdr.linknames_count );
+		const reader = self.buffer.reader();
+		try reader.readNoEof(std.mem.sliceAsBytes(links));
+		return links;
+	}
+
+	pub fn readLinkNames( self: *Reader, allocator: std.mem.Allocator ) ReadError!StringTable 
+	{
+		return self.readStringsInternal( allocator, self.hdr.linknames_len, self.hdr.linknames_count );
+	}
+
+
+	fn readStringsInternal(  self: *Reader, allocator: std.mem.Allocator, len: usize, count: u32 ) ReadError!StringTable
+	{
+		const strings = try allocator.alloc( u8, len );
+		try self.buffer.reader().readNoEof( strings );
+
+		var hashmap = HashMap.empty;
+		try hashmap.ensureTotalCapacity( allocator, count );
+
+		var str_start: usize = 0;
+		for (strings, 0..) |c, i|
+		{
+			if (c != 0) continue;
+
+			const str = strings[str_start..i];
+			const hash = std.hash.Wyhash.hash( 0, str );
+			hashmap.putAssumeCapacity( hash, str );
+			str_start = i+1;
+		}
+
+		return .{ .hashmap = hashmap, .strings = strings };
 	}
 
 	const HashContext = struct {
@@ -196,28 +235,6 @@ pub const Reader = struct {
 			allocator.free( self.strings );
 		}
 	};
-
-	pub fn readStrings( self: *Reader, allocator: std.mem.Allocator, header: Header ) ReadError!StringTable
-	{
-		const strings = try allocator.alloc( u8, header.strings_len );
-		try self.buffer.reader().readNoEof( strings );
-
-		var hashmap = HashMap.empty;
-		try hashmap.ensureTotalCapacity( allocator, header.strings_count );
-
-		var str_start: usize = 0;
-		for (strings, 0..) |c, i|
-		{
-			if (c != 0) continue;
-
-			const str = strings[str_start..i];
-			const hash = std.hash.Wyhash.hash( 0, str );
-			hashmap.putAssumeCapacity( hash, str );
-			str_start = i+1;
-		}
-
-		return .{ .hashmap = hashmap, .strings = strings };
-	}
 
 };
 
