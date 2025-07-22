@@ -1,0 +1,26 @@
+[
+	{
+	  "directory": "C:/GitHub/clang-tool/tests/cl_0",
+	  "command": "cl.exe  /nologo /FS -c C:\\GitHub\\clang-tool\\tests\\cl_0\\test.cpp",
+	  "file": "test.cpp",
+	  "output": "test.cpp.obj"
+	},
+	{
+		"directory": "C:/GitHub/clang-tool/tests/cl_0",
+		"command": "cl.exe --dump -- /nologo /FS -c C:\\GitHub\\clang-tool\\tests\\cl_0\\test1.cpp",
+		"file": "test1.cpp",
+		"output": "test1.cpp.obj"
+	},
+	{
+		"directory": "C:/GitHub/clang-tool/tests/cl_0",
+		"command": "cl.exe  /nologo /FS -c C:\\GitHub\\clang-tool\\tests\\cl_0\\test2.cpp",
+		"file": "test2.cpp",
+		"output": "test2.cpp.obj"
+	},
+	{
+		"directory": "C:/GitHub/clang-tool/tests/cl_0",
+		"command": "cl.exe  /nologo /FS -c C:\\GitHub\\clang-tool\\tests\\cl_0\\test3.cpp",
+		"file": "test3.cpp",
+		"output": "test3.cpp.obj"
+	}
+]
